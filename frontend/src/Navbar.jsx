@@ -44,12 +44,13 @@ export default function Navbar() {
   return (
     <nav style={styles.nav}>
       <div style={styles.left}>
+        <Link to="/dashboard" style={styles.link}>Home</Link>
         <Link to="/listings" style={styles.link}>Browse Listings</Link>
-        <Link to="/dashboard" style={styles.link}>Dashboard</Link>
-        <Link to="/post" style={styles.link}>Post an Ad</Link> {/* ✅ Always visible */}
+        <Link to="/post" style={styles.link}>Post an Ad</Link>
         {user.is_buyer && <Link to="/favorites" style={styles.link}>Favorites</Link>}
         <Link to="/messages" style={styles.link}>My Messages</Link>
-        <Link to="/inbox" style={styles.link}>Chat Inbox</Link> {/* ✅ Always visible */}
+        <Link to="/inbox" style={styles.link}>Chat Inbox</Link>
+        <Link to="/settings" style={styles.link}>Settings</Link> {/* ✅ Added settings link */}
         {user.is_admin && <Link to="/admin" style={styles.link}>Admin Panel</Link>}
       </div>
 
