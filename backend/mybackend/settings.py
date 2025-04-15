@@ -24,7 +24,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'api',  # Your app
+    'channels',  # Channels app for WebSockets
 ]
+
+# ✅ Use custom user model
+AUTH_USER_MODEL = 'api.CommunityUser'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -55,6 +59,9 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'mybackend.wsgi.application'
+
+# ASGI Configuration for Channels
+ASGI_APPLICATION = 'mybackend.asgi.application'
 
 # Database
 DATABASES = {
@@ -101,3 +108,14 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ]
 }
+
+# Channel Layers Setup (Required for WebSocket)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
+
