@@ -53,6 +53,7 @@ export default function Navbar() {
             <Link to="/post" style={styles.link}>Post Ad</Link>
             <Link to="/favorites" style={styles.link}>Favorites</Link>
             <Link to="/messages" style={styles.link}>My Messages</Link>
+            <Link to="/inbox" style={styles.link}>Inbox</Link> {/* ✅ NEW */}
           </>
         )}
       </div>

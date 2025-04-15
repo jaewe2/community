@@ -7,8 +7,9 @@ import Dashboard from "./Dashboard";
 import PostAdPage from "./PostAdPage";
 import ListingsPage from "./ListingsPage";
 import ListingDetail from "./ListingDetail";
-import Favorites from "./Favorites";         // ✅ NEW
-import MyMessages from "./MyMessages";       // ✅ NEW
+import Favorites from "./Favorites";
+import MyMessages from "./MyMessages";
+import Inbox from "./Inbox"; // ✅ NEW
 import PrivateRoute from "./PrivateRoute";
 import Navbar from "./Navbar";
 
@@ -56,6 +57,15 @@ export default function App() {
           element={
             <PrivateRoute>
               <MyMessages />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/inbox"
+          element={
+            <PrivateRoute>
+              <Inbox />
             </PrivateRoute>
           }
         />
