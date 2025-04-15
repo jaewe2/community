@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import { FaHeart } from "react-icons/fa";
+import { FaHeart, FaTrash } from "react-icons/fa";
 
 export default function ListingsPage() {
   const [listings, setListings] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [categories, setCategories] = useState([]);
   const [likedMap, setLikedMap] = useState({});
+  const [user, setUser] = useState(null); // Current logged-in user
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -18,11 +19,23 @@ export default function ListingsPage() {
   const selectedSort = queryParams.get("sort") || "";
 
   useEffect(() => {
+    // Fetch current user info
+    fetch("http://127.0.0.1:8000/api/user/profile", {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+      },
+    })
+      .then((res) => res.json())
+      .then(setUser)
+      .catch(() => toast.error("Failed to load user"));
+
+    // Fetch listings
     fetch("http://127.0.0.1:8000/api/postings/")
       .then((res) => res.json())
       .then(setListings)
       .catch(() => toast.error("Failed to load listings"));
 
+    // Fetch categories
     fetch("http://127.0.0.1:8000/api/categories/")
       .then((res) => res.json())
       .then(setCategories)
@@ -47,11 +60,15 @@ export default function ListingsPage() {
       });
     }
 
+    // Ensure category is treated as a string before using toLowerCase
     if (selectedCategory) {
-      results = results.filter(
-        (item) =>
-          item.category?.toLowerCase() === selectedCategory.toLowerCase()
-      );
+      results = results.filter((item) => {
+        const category = item.category;
+        return (
+          typeof category === "string" &&
+          category.toLowerCase() === selectedCategory.toLowerCase()
+        );
+      });
     }
 
     if (selectedSort === "price_asc") {
@@ -87,6 +104,28 @@ export default function ListingsPage() {
     e.preventDefault(); // prevent navigating to detail on heart click
     e.stopPropagation();
     setLikedMap((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleDelete = async (listingId) => {
+    const confirm = window.confirm("Are you sure you want to delete this listing?");
+    if (!confirm) return;
+
+    try {
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch(`http://127.0.0.1:8000/api/postings/${listingId}/`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error("Delete failed");
+      setListings((prev) => prev.filter((listing) => listing.id !== listingId));
+      toast.success("Listing deleted");
+    } catch (err) {
+      console.error(err);
+      toast.error("Error deleting listing");
+    }
   };
 
   return (
@@ -162,6 +201,14 @@ export default function ListingsPage() {
                     />
                   </div>
                 </Link>
+                {user?.id === item.user && (
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    style={styles.deleteBtn}
+                  >
+                    <FaTrash /> Delete Listing
+                  </button>
+                )}
               </div>
             );
           })}
@@ -267,5 +314,14 @@ const styles = {
   link: {
     textDecoration: "none",
     color: "inherit",
+  },
+  deleteBtn: {
+    padding: "8px 12px",
+    background: "#dc3545",
+    color: "#fff",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    marginTop: "10px",
   },
 };

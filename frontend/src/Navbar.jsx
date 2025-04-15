@@ -1,20 +1,23 @@
-// src/Navbar.jsx
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { auth } from "./firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { signOut } from "firebase/auth";
 import { toast } from "react-toastify";
+import { useAuth } from "./AuthContext";
 
 export default function Navbar() {
-  const [user, setUser] = useState(null);
+  const { user, loading } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
+  // ✅ Wait until user and auth context are ready
+  if (loading || !user) return null;
+
+  // 🔒 Hide navbar on login or register pages
+  if (location.pathname === "/login" || location.pathname === "/register") {
+    return null;
+  }
 
   const handleLogout = async () => {
     try {
@@ -38,24 +41,16 @@ export default function Navbar() {
     }
   };
 
-  // 🔒 Hide navbar on login or register routes
-  if (location.pathname === "/login" || location.pathname === "/register") {
-    return null;
-  }
-
   return (
     <nav style={styles.nav}>
       <div style={styles.left}>
         <Link to="/listings" style={styles.link}>Browse Listings</Link>
-        {user && (
-          <>
-            <Link to="/dashboard" style={styles.link}>Dashboard</Link>
-            <Link to="/post" style={styles.link}>Post Ad</Link>
-            <Link to="/favorites" style={styles.link}>Favorites</Link>
-            <Link to="/messages" style={styles.link}>My Messages</Link>
-            <Link to="/inbox" style={styles.link}>Inbox</Link> {/* ✅ NEW */}
-          </>
-        )}
+        <Link to="/dashboard" style={styles.link}>Dashboard</Link>
+        <Link to="/post" style={styles.link}>Post an Ad</Link> {/* ✅ Always visible */}
+        {user.is_buyer && <Link to="/favorites" style={styles.link}>Favorites</Link>}
+        <Link to="/messages" style={styles.link}>My Messages</Link>
+        <Link to="/inbox" style={styles.link}>Chat Inbox</Link> {/* ✅ Always visible */}
+        {user.is_admin && <Link to="/admin" style={styles.link}>Admin Panel</Link>}
       </div>
 
       <form onSubmit={handleSearch} style={styles.searchForm}>
@@ -70,17 +65,8 @@ export default function Navbar() {
       </form>
 
       <div style={styles.right}>
-        {user ? (
-          <>
-            <span style={styles.user}>Hello, {user.email}</span>
-            <button onClick={handleLogout} style={styles.logout}>Logout</button>
-          </>
-        ) : (
-          <>
-            <Link to="/login" style={styles.link}>Login</Link>
-            <Link to="/register" style={styles.link}>Register</Link>
-          </>
-        )}
+        <span style={styles.user}>Hello, {user.email}</span>
+        <button onClick={handleLogout} style={styles.logout}>Logout</button>
       </div>
     </nav>
   );

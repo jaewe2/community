@@ -1,242 +1,260 @@
 // src/Inbox.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { auth } from "./firebase";
 import { toast } from "react-toastify";
-import { FaTrash, FaReply } from "react-icons/fa";
 
 export default function Inbox() {
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [replyBox, setReplyBox] = useState(null);
+  const [conversations, setConversations] = useState([]);
+  const [selectedMessages, setSelectedMessages] = useState([]);
+  const [selectedListingId, setSelectedListingId] = useState(null);
   const [replyText, setReplyText] = useState("");
-  const [sortOrder, setSortOrder] = useState("newest");
+  const isTyping = useRef(false);
+  const [currentUID, setCurrentUID] = useState(null);
 
   useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        const token = await auth.currentUser?.getIdToken();
-        const res = await fetch("http://127.0.0.1:8000/api/messages/inbox/", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) throw new Error("Failed to load inbox messages");
-        const data = await res.json();
-        setMessages(data);
-      } catch (err) {
-        console.error(err);
-        toast.error("Could not load inbox");
-      } finally {
-        setLoading(false);
+    const getUID = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        const token = await user.getIdTokenResult();
+        setCurrentUID(token.claims.user_id || user.uid); // fallback to Firebase UID
       }
     };
 
+    getUID();
     fetchMessages();
+
+    const interval = setInterval(() => {
+      if (!isTyping.current) fetchMessages();
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  const handleDelete = async (id) => {
-    const confirm = window.confirm("Delete this message?");
-    if (!confirm) return;
-
+  const fetchMessages = async () => {
     try {
       const token = await auth.currentUser?.getIdToken();
-      const res = await fetch(`http://127.0.0.1:8000/api/messages/${id}/`, {
-        method: "DELETE",
+      const res = await fetch("http://127.0.0.1:8000/api/messages/inbox/", {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (!res.ok) throw new Error("Delete failed");
-      setMessages((prev) => prev.filter((m) => m.id !== id));
-      toast.success("Message deleted");
+      if (!res.ok) throw new Error("Failed to load messages");
+      const data = await res.json();
+      const grouped = data.reduce((acc, msg) => {
+        acc[msg.listing] = acc[msg.listing] || [];
+        acc[msg.listing].push({
+          ...msg,
+          is_own: msg.sender_uid === currentUID || msg.sender === auth.currentUser.email,
+        });
+        return acc;
+      }, {});
+      setConversations(grouped);
+      if (selectedListingId && grouped[selectedListingId]) {
+        setSelectedMessages(grouped[selectedListingId]);
+      }
     } catch (err) {
-      console.error(err);
-      toast.error("Error deleting message");
+      toast.error("Could not load inbox");
     }
   };
 
-  const handleReply = async (listingId) => {
-    if (!replyText.trim()) return;
+  const handleSelectThread = (listingId) => {
+    setSelectedListingId(listingId);
+    setSelectedMessages(conversations[listingId]);
+  };
 
+  const handleReply = async (parentMessageId) => {
+    if (!replyText.trim()) return;
     try {
       const token = await auth.currentUser?.getIdToken();
-      const res = await fetch("http://127.0.0.1:8000/api/messages/", {
+      const res = await fetch(`http://127.0.0.1:8000/api/messages/${parentMessageId}/reply/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ listing: listingId, content: replyText }),
+        body: JSON.stringify({ content: replyText }),
       });
-
       if (!res.ok) throw new Error("Reply failed");
-      toast.success("Reply sent");
-      setReplyBox(null);
       setReplyText("");
+      isTyping.current = false;
+      await fetchMessages(); // refresh after sending
     } catch (err) {
-      console.error(err);
       toast.error("Failed to send reply");
     }
   };
 
-  const sortedMessages = [...messages].sort((a, b) => {
-    const aTime = new Date(a.created_at).getTime();
-    const bTime = new Date(b.created_at).getTime();
-    return sortOrder === "newest" ? bTime - aTime : aTime - bTime;
-  });
-
-  // Group messages by listing_id
-  const groupedMessages = sortedMessages.reduce((acc, message) => {
-    (acc[message.listing] = acc[message.listing] || []).push(message);
-    return acc;
-  }, {});
-
-  if (loading) return <p style={{ padding: "2rem" }}>Loading inbox...</p>;
-  if (messages.length === 0) return <p style={{ padding: "2rem" }}>No new messages.</p>;
-
   return (
-    <div style={styles.container}>
-      <div style={styles.headerRow}>
-        <h2 style={styles.heading}>Inbox</h2>
-        <select
-          value={sortOrder}
-          onChange={(e) => setSortOrder(e.target.value)}
-          style={styles.sortSelect}
-        >
-          <option value="newest">Sort: Newest</option>
-          <option value="oldest">Sort: Oldest</option>
-        </select>
+    <div style={styles.wrapper}>
+      {/* Left Sidebar - Recent */}
+      <div style={styles.sidebar}>
+        <h3 style={styles.sidebarHeader}>Recent</h3>
+        {Object.entries(conversations).map(([listingId, msgs]) => {
+          const lastMsg = msgs[msgs.length - 1];
+          return (
+            <div
+              key={listingId}
+              onClick={() => handleSelectThread(listingId)}
+              style={{
+                ...styles.threadPreview,
+                background: listingId === selectedListingId ? "#e0eaff" : "#f8f8f8",
+              }}
+            >
+              <div style={styles.avatar}> {lastMsg.sender?.[0]?.toUpperCase() || "?"} </div>
+              <div style={styles.threadText}>
+                <p style={styles.sender}>{lastMsg.sender}</p>
+                <p style={styles.preview}>{lastMsg.content.slice(0, 40)}...</p>
+              </div>
+              <p style={styles.date}>{new Date(lastMsg.created_at).toLocaleDateString()}</p>
+            </div>
+          );
+        })}
       </div>
 
-      <ul style={styles.list}>
-        {Object.entries(groupedMessages).map(([listingId, listingMessages]) => (
-          <li key={listingId} style={styles.card}>
-            <h3>Listing ID: {listingId}</h3>
-            {listingMessages.map((msg) => (
-              <div key={msg.id} style={styles.message}>
-                <p style={styles.title}>{msg.listing_title || "Untitled Listing"}</p>
-                <p><strong>From:</strong> {msg.sender}</p>
-                <p><strong>Message:</strong> {msg.content}</p>
-                <p style={styles.meta}>Received on {new Date(msg.created_at).toLocaleString()}</p>
-
-                <div style={styles.actions}>
-                  <button onClick={() => setReplyBox(msg.id)} style={styles.replyBtn}>
-                    <FaReply /> Reply
-                  </button>
-                  <button onClick={() => handleDelete(msg.id)} style={styles.deleteBtn}>
-                    <FaTrash /> Delete
-                  </button>
-                </div>
-
-                {replyBox === msg.id && (
-                  <div style={styles.replyBox}>
-                    <textarea
-                      rows="3"
-                      placeholder="Type your reply..."
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      style={styles.textarea}
-                    />
-                    <button onClick={() => handleReply(msg.listing)} style={styles.sendBtn}>
-                      Send Reply
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </li>
-        ))}
-      </ul>
+      {/* Right Panel - Chat Thread */}
+      <div style={styles.chatPanel}>
+        <h3 style={styles.heading}>Messaging</h3>
+        <div style={styles.messagesArea}>
+          {selectedMessages.map((msg) => (
+            <div
+              key={msg.id}
+              style={{
+                ...styles.messageBubble,
+                alignSelf: msg.is_own ? "flex-end" : "flex-start",
+                background: msg.is_own ? "#2f6f8f" : "#eaeaea",
+                color: msg.is_own ? "#fff" : "#000",
+              }}
+            >
+              {msg.content}
+              <div style={styles.timestamp}>{new Date(msg.created_at).toLocaleString()}</div>
+            </div>
+          ))}
+        </div>
+        {selectedMessages.length > 0 && (
+          <div style={styles.replyBar}>
+            <textarea
+              style={styles.textarea}
+              placeholder="Type a message..."
+              value={replyText}
+              onChange={(e) => {
+                isTyping.current = true;
+                setReplyText(e.target.value);
+              }}
+            />
+            <button
+              onClick={() => handleReply(selectedMessages[selectedMessages.length - 1].id)}
+              style={styles.sendBtn}
+            >
+              Send
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 const styles = {
-  container: {
-    maxWidth: "800px",
-    margin: "2rem auto",
-    padding: "2rem",
-    background: "#fff",
-    borderRadius: "12px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+  wrapper: {
+    display: "flex",
+    height: "calc(100vh - 60px)",
     fontFamily: "'Segoe UI', sans-serif",
   },
-  headerRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "1rem",
+  sidebar: {
+    width: "300px",
+    borderRight: "1px solid #ddd",
+    overflowY: "auto",
+    padding: "1rem",
+    background: "#f2f2f2",
   },
-  heading: {
-    fontSize: "1.8rem",
+  sidebarHeader: {
+    fontSize: "1.3rem",
     color: "#007bff",
     marginBottom: "1rem",
   },
-  sortSelect: {
-    padding: "6px 10px",
-    borderRadius: "6px",
-    border: "1px solid #ccc",
-    fontSize: "0.9rem",
+  threadPreview: {
+    display: "flex",
+    alignItems: "center",
+    padding: "10px",
+    marginBottom: "10px",
+    borderRadius: "8px",
+    cursor: "pointer",
   },
-  list: {
-    listStyle: "none",
-    padding: 0,
-  },
-  card: {
-    padding: "1rem",
-    borderBottom: "1px solid #eee",
-    marginBottom: "1rem",
-  },
-  message: {
-    padding: "1rem",
-    borderBottom: "1px solid #ddd",
-    marginBottom: "1rem",
-  },
-  title: {
+  avatar: {
+    width: "40px",
+    height: "40px",
+    borderRadius: "50%",
+    backgroundColor: "#007bff",
+    color: "#fff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     fontWeight: "bold",
     fontSize: "1rem",
-    color: "#222",
+    marginRight: "10px",
   },
-  meta: {
+  threadText: {
+    flex: 1,
+  },
+  sender: {
+    fontWeight: "bold",
+    fontSize: "0.95rem",
+  },
+  preview: {
     fontSize: "0.85rem",
-    color: "#666",
+    color: "#555",
   },
-  actions: {
+  date: {
+    fontSize: "0.75rem",
+    color: "#888",
+    whiteSpace: "nowrap",
+  },
+  chatPanel: {
+    flex: 1,
     display: "flex",
-    gap: "10px",
-    marginTop: "0.8rem",
+    flexDirection: "column",
+    padding: "1rem",
   },
-  replyBtn: {
+  heading: {
+    fontSize: "1.5rem",
+    marginBottom: "1rem",
+  },
+  messagesArea: {
+    flex: 1,
+    overflowY: "auto",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    padding: "1rem",
+    border: "1px solid #eee",
+    borderRadius: "10px",
+    background: "#fafafa",
+  },
+  messageBubble: {
+    padding: "10px 14px",
+    borderRadius: "16px",
+    maxWidth: "60%",
+    position: "relative",
+  },
+  timestamp: {
+    fontSize: "0.7rem",
+    marginTop: "6px",
+    color: "#ccc",
+  },
+  replyBar: {
+    display: "flex",
+    marginTop: "1rem",
+    gap: "10px",
+  },
+  textarea: {
+    flex: 1,
+    padding: "10px",
+    borderRadius: "8px",
+    border: "1px solid #ccc",
+    resize: "none",
+  },
+  sendBtn: {
     background: "#007bff",
     color: "#fff",
     border: "none",
-    padding: "6px 10px",
+    padding: "10px 16px",
     borderRadius: "6px",
-    cursor: "pointer",
-  },
-  deleteBtn: {
-    background: "#dc3545",
-    color: "#fff",
-    border: "none",
-    padding: "6px 10px",
-    borderRadius: "6px",
-    cursor: "pointer",
-  },
-  replyBox: {
-    marginTop: "1rem",
-  },
-  textarea: {
-    width: "100%",
-    padding: "10px",
-    borderRadius: "6px",
-    border: "1px solid #ccc",
-    resize: "vertical",
-    marginBottom: "0.5rem",
-  },
-  sendBtn: {
-    background: "#28a745",
-    color: "#fff",
-    padding: "8px 14px",
-    borderRadius: "6px",
-    border: "none",
     cursor: "pointer",
   },
 };

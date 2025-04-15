@@ -1,4 +1,3 @@
-// src/ListingDetail.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -22,6 +21,11 @@ export default function ListingDetail() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (!auth.currentUser) {
+      toast.error("You must be logged in to view or interact with listings.");
+      navigate("/login");
+    }
+
     fetch(`http://127.0.0.1:8000/api/postings/${id}/`)
       .then((res) => {
         if (!res.ok) throw new Error("Listing not found");
@@ -112,12 +116,13 @@ export default function ListingDetail() {
         body: JSON.stringify({
           listing: id,
           content: messageContent,
+          recipient: listing.user_id, // ✅ Added this line
         }),
       });
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.detail || "Failed to send message");
+        throw new Error(errData.detail || JSON.stringify(errData));
       }
 
       toast.success("Message sent!");

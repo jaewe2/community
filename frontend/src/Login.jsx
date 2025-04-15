@@ -1,5 +1,4 @@
-// src/Login.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "./firebase";
 import { useNavigate, Link } from "react-router-dom";
@@ -11,6 +10,16 @@ import "react-toastify/dist/ReactToastify.css";
 export default function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
+
+  // ✅ Redirect if user is already logged in
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        navigate("/dashboard");
+      }
+    });
+    return () => unsubscribe();
+  }, [navigate]);
 
   const LoginSchema = Yup.object().shape({
     email: Yup.string().email("Invalid email").required("Required"),
