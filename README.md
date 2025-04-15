@@ -6,6 +6,7 @@ npm install react-icons
 
 npm install react-router-dom react-icons react-toastify firebase
 
+
 backend dependencies:
 
-pip install pillow
+pip install Django djangorestframework firebase-admin django-cors-headers Pillow
