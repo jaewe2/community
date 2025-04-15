@@ -1,0 +1,49 @@
+#navbar {
+    position:sticky;
+    top: 0;
+    background-color: #000 !important;
+    z-index: 1;
+    border: none !important
+    ;
+}
+
+#navbar a {
+    color: #fff !important;
+    font-weight: lighter !important;
+}
+
+#navbar span {
+    color: #bbb !important;
+
+}
+
+#navbar a:hover {
+    color: #fff !important;
+    text-decoration: underline !important;
+    font-weight: lighter !important;
+}
+
+#navbar input {
+    border-radius: 0px !important;
+    background-color: #333;
+    border: none !important;
+    color: #ddd;
+    min-width: 0px !important;
+    padding: 6px 0 !important;
+    width: 0px !important;
+    transition: .2s;
+}
+
+#navbar form > * {
+    margin: 0 !important;
+}
+
+#navbar form:hover > input, #navbar form:active > input, #navbar form:focus > input, input:active, input:focus  {
+    padding: 6px 6px !important;
+    min-width: 180px !important;
+
+}
+
+button {
+    background: var(--accent-color) !important;
+}

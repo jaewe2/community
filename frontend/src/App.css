@@ -65,3 +65,34 @@
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* */
+
+:root {
+  --accent-color: #751fff;
+  --accent-color-t: #751fff22;
+  --accent-color-2-t: #ffffff11;
+  --border-size: 20px;
+  --bg-dark-1: #fff;
+  --bg-dark-2: #f9f9f9;
+}
+
+#root{
+  width: 100vw !important;
+  height: 100vh !important;
+  position: absolute;
+  top: 0;
+  background: linear-gradient(0deg,var(--accent-color) 0%, #fff 100%),      linear-gradient(135deg,#0000 20%, var(--bg-dark-2) 20% 30%,#0000 0),
+  repeating-linear-gradient(45deg, var(--bg-dark-2) 20% 30%,var(--bg-dark-1) 0 70%), repeating-linear-gradient(45deg, var(--bg-dark-2) 20% 30%,var(--bg-dark-1) 0 70%); 
+  background-size: contain,  30px 30px,  30px 30px;
+  background-blend-mode: overlay, normal, normal;
+  padding-bottom: 5rem;
+}
+
+body {
+  position: absolute;
+  top: 0;
+  background-size: 100% !important;
+  height: 100%;
+}
+

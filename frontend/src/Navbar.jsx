@@ -4,6 +4,8 @@ import { auth } from "./firebase";
 import { signOut } from "firebase/auth";
 import { toast } from "react-toastify";
 import { useAuth } from "./AuthContext";
+import "./App.css";
+import "./Navbar.css";
 
 export default function Navbar() {
   const { user, loading } = useAuth();
@@ -42,7 +44,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav style={styles.nav}>
+    <nav id="navbar" style={styles.nav}>
       <div style={styles.left}>
         <Link to="/dashboard" style={styles.link}>Home</Link>
         <Link to="/listings" style={styles.link}>Browse Listings</Link>

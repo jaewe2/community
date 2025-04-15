@@ -6,6 +6,8 @@ import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import "./App.css";
+import "./Login.css";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -62,7 +64,7 @@ export default function Login() {
   };
 
   return (
-    <div style={styles.container}>
+    <div id="bg" style={styles.container}>
       <div style={styles.card}>
         <h2 style={styles.title}>Login</h2>
         <Formik

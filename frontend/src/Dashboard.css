@@ -1,0 +1,21 @@
+.header {
+    background: linear-gradient(0deg,  #f4f4f4 0%,  #fff0 100%), url(https://images.unsplash.com/photo-1470225620780-dba8ba36b745) !important;
+    background-size: auto, cover !important;
+    background-position: center, center !important;
+    border-radius: 20px 20px 0 0 !important;
+    margin-left: -2rem;
+    margin-top: -2rem;
+    width: calc(100% + 1rem);
+}
+
+ .listingPrice {
+    color: var(--accent-color) !important;
+    transition: .2s  !important;
+    transform: scale(1.00) !important;
+
+ }
+
+ .listingCard:hover, .categoryCard:hover {
+    transform: scale(1.02) !important;
+    filter: drop-shadow(0 0 5px #0002);
+ }

@@ -110,15 +110,15 @@ export default function PostAdPage() {
   };
 
   return (
-    <div style={styles.container}>
+    <div class="container" style={styles.container}>
       <h2>Post a New Ad</h2>
-      <form onSubmit={handleSubmit} style={styles.form}>
+      <form onSubmit={handleSubmit} class="form" style={styles.form}>
         <input
           name="title"
           placeholder="Title"
           value={form.title}
           onChange={handleChange}
-          style={styles.input}
+          class="input" style={styles.input}
           required
         />
         <textarea
@@ -126,7 +126,7 @@ export default function PostAdPage() {
           placeholder="Description"
           value={form.description}
           onChange={handleChange}
-          style={styles.textarea}
+          class="textarea" style={styles.textarea}
           required
         />
         <input
@@ -135,21 +135,21 @@ export default function PostAdPage() {
           placeholder="Price"
           value={form.price}
           onChange={handleChange}
-          style={styles.input}
+          class="input" style={styles.input}
         />
         <input
           name="location"
           placeholder="Location"
           value={form.location}
           onChange={handleChange}
-          style={styles.input}
+          class="input" style={styles.input}
           required
         />
         <select
           name="category"
           value={form.category}
           onChange={handleChange}
-          style={styles.input}
+          class="input" style={styles.input}
           required
         >
           <option value="">Select Category</option>
@@ -184,25 +184,25 @@ export default function PostAdPage() {
             style={{ display: "none" }}
             id="fileInput"
           />
-          <label htmlFor="fileInput" style={styles.uploadLabel}>
+          <label htmlFor="fileInput" class="uploadLabel" style={styles.uploadLabel}>
             Browse
           </label>
         </div>
 
         {images.length > 0 && (
-          <div style={styles.previewRow}>
+          <div class="previewRow" style={styles.previewRow}>
             {images.map((img, idx) => (
               <img
                 key={idx}
                 src={URL.createObjectURL(img)}
                 alt="preview"
-                style={styles.thumb}
+                class="thumb" style={styles.thumb}
               />
             ))}
           </div>
         )}
 
-        <button type="submit" style={styles.button} disabled={loading}>
+        <button type="submit" class="button" style={styles.button} disabled={loading}>
           {loading ? "Posting..." : "Submit Ad"}
         </button>
       </form>
@@ -212,10 +212,7 @@ export default function PostAdPage() {
 
 const styles = {
   container: {
-    padding: "2rem",
     maxWidth: "600px",
-    margin: "0 auto",
-    textAlign: "center",
   },
   form: {
     display: "flex",

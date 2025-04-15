@@ -1,0 +1,42 @@
+.container {
+    margin: 0 auto;
+    margin-top: 50px;
+    max-width: 1200px;
+    padding: 2rem 3rem;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    color:#222;
+    background: #fff ;
+    filter:  drop-shadow(0 0 10px #0004);
+    border-radius: var(--border-size);
+ }
+
+ .filterRow {
+    margin-bottom: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: right;
+}
+ 
+ .container > h2 {
+    font-size: 3em;
+ }
+
+ select{
+    background-color: #0000 !important;
+    border: none !important;
+    
+ }
+
+ select:hover,  select:active{
+    color: #777;
+    border: none !important;
+ }
+
+ .price {
+    color: var(--accent-color) !important;
+ }
+
+ .card {
+    background: linear-gradient(80deg,rgba(255, 255, 255, 1) 75%, var(--accent-color) 75%) !important; }

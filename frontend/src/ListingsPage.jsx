@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { FaHeart, FaTrash } from "react-icons/fa";
+import "./App.css";
+import "./ListingsPage.css";
 
 export default function ListingsPage() {
   const [listings, setListings] = useState([]);
@@ -129,25 +131,25 @@ export default function ListingsPage() {
   };
 
   return (
-    <div style={styles.container}>
+    <div class="container" style={styles.container}>
       <h2>Community Listings</h2>
 
-      <div style={styles.filterRow}>
-        <select value={selectedCategory} onChange={handleCategoryChange} style={styles.select}>
+      <div class="filterRow" style={styles.filterRow}>
+        <select value={selectedCategory} onChange={handleCategoryChange} class="select" style={styles.select}>
           <option value="">All Categories</option>
           {categories.map((cat) => (
             <option key={cat.id} value={cat.name}>{cat.name}</option>
           ))}
         </select>
 
-        <select value={selectedSort} onChange={handleSortChange} style={styles.select}>
+        <select value={selectedSort} onChange={handleSortChange} class="select" style={styles.select}>
           <option value="">Sort By</option>
           <option value="newest">Newest</option>
           <option value="price_asc">Price (Low to High)</option>
           <option value="price_desc">Price (High to Low)</option>
         </select>
 
-        <button onClick={resetFilters} style={styles.reset}>
+        <button onClick={resetFilters} class="reset" style={styles.reset}>
           Reset Filters
         </button>
       </div>
@@ -155,7 +157,7 @@ export default function ListingsPage() {
       {filtered.length === 0 ? (
         <p>No listings found.</p>
       ) : (
-        <div style={styles.grid}>
+        <div class="grid" style={styles.grid}>
           {filtered.map((item) => {
             const imageUrl =
               item.images?.[0]?.url ||
@@ -163,10 +165,10 @@ export default function ListingsPage() {
               "https://via.placeholder.com/320x200?text=No+Image";
 
             return (
-              <div key={item.id} style={styles.cardWrapper}>
-                <Link to={`/listing/${item.id}`} style={styles.link}>
+              <div key={item.id} class="cardWrapper" style={styles.cardWrapper}>
+                <Link to={`/listing/${item.id}`} class="link" style={styles.link}>
                   <div
-                    style={styles.card}
+                    class="card" style={styles.card}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = "translateY(-4px)";
                       e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.1)";
@@ -179,24 +181,24 @@ export default function ListingsPage() {
                     <img
                       src={imageUrl}
                       alt="Listing"
-                      style={styles.image}
+                      class="image" style={styles.image}
                       onError={(e) => {
                         e.target.src = "https://via.placeholder.com/320x200?text=No+Image";
                       }}
                     />
-                    <h3 style={styles.title}>{item.title}</h3>
-                    <p style={styles.price}>${item.price}</p>
-                    <p style={styles.meta}><strong>Location:</strong> {item.location}</p>
-                    <p style={styles.meta}><strong>Category:</strong> {item.category_name || item.category}</p>
-                    <p style={styles.description}>{item.description}</p>
-                    <p style={styles.date}>
+                    <h3 class="title=" style={styles.title}>{item.title}</h3>
+                    <p class="price" style={styles.price}>${item.price}</p>
+                    <p class="meta" style={styles.meta}><strong>Location:</strong> {item.location}</p>
+                    <p class="meta" style={styles.meta}><strong>Category:</strong> {item.category_name || item.category}</p>
+                    <p class="description" style={styles.description}>{item.description}</p>
+                    <p class="date" style={styles.date}>
                       Posted on {new Date(item.created_at).toLocaleDateString()}
                     </p>
                     <FaHeart
                       onClick={(e) => toggleLike(item.id, e)}
                       color={likedMap[item.id] ? "#dc3545" : "#ccc"}
                       size={20}
-                      style={styles.heart}
+                      class="heart" style={styles.heart}
                       title={likedMap[item.id] ? "Unfavorite" : "Favorite"}
                     />
                   </div>
@@ -204,7 +206,7 @@ export default function ListingsPage() {
                 {user?.id === item.user && (
                   <button
                     onClick={() => handleDelete(item.id)}
-                    style={styles.deleteBtn}
+                    class="deleteBtn" style={styles.deleteBtn}
                   >
                     <FaTrash /> Delete Listing
                   </button>
@@ -220,19 +222,9 @@ export default function ListingsPage() {
 
 const styles = {
   container: {
-    padding: "2rem 1rem",
-    maxWidth: "1200px",
-    margin: "0 auto",
-    fontFamily: "'Segoe UI', Roboto, sans-serif",
-    color: "#222",
   },
   filterRow: {
-    marginBottom: "2rem",
-    display: "flex",
-    flexWrap: "wrap",
-    gap: "12px",
-    alignItems: "center",
-    justifyContent: "space-between",
+
   },
   select: {
     padding: "10px",

@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
+import "./App.css";
+import "./Dashboard.css";
 
 const LandingPage = () => {
   const [categories, setCategories] = useState([]);
@@ -87,11 +89,11 @@ const LandingPage = () => {
   }
 
   return (
-    <div style={styles.container}>
-      <header style={styles.header}>
-        <h1 style={styles.title}>Buy, Sell, Rent & Exchange in One Click</h1>
-        <p style={styles.subTitle}>Find everything from used cars to mobile phones and more.</p>
-        <div style={styles.searchContainer}>
+    <div class="container" style={styles.container}>
+      <header class="header" style={styles.header}>
+        <h1 class="title" style={styles.title}>Buy, Sell, Rent & Exchange in One Click</h1>
+        <p class="subTitle" style={styles.subTitle}>Find everything from used cars to mobile phones and more.</p>
+        <div class="searchContainer" style={styles.searchContainer}>
           <input
             type="text"
             placeholder="What are you looking for?"
@@ -100,12 +102,12 @@ const LandingPage = () => {
               setSearchQuery(e.target.value); // Capture search query
               handleSearchSuggestions(e.target.value); // Update search suggestions
             }}
-            style={styles.searchInput}
+            class="searchInput" style={styles.searchInput}
           />
           {searchSuggestions.length > 0 && (
-            <div style={styles.suggestionsContainer}>
+            <div class="suggestionsContainer" style={styles.suggestionsContainer}>
               {searchSuggestions.map((suggestion, index) => (
-                <div key={index} style={styles.suggestionItem}>
+                <div key={index} class="suggestionItem" style={styles.suggestionItem}>
                   {suggestion.name}
                 </div>
               ))}
@@ -114,7 +116,7 @@ const LandingPage = () => {
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)} // Capture selected category
-            style={styles.selectInput}
+            class="selectInput" style={styles.selectInput}
           >
             <option value="">Category</option>
             {categories.map((category) => (
@@ -128,42 +130,42 @@ const LandingPage = () => {
             placeholder="Location"
             value={selectedLocation}
             onChange={(e) => setSelectedLocation(e.target.value)} // Capture selected location
-            style={styles.searchInput}
+            class="searchInput" style={styles.searchInput}
           />
-          <button onClick={handleSearch} style={styles.searchButton}>
+          <button onClick={handleSearch} class="searchButton" style={styles.searchButton}>
             Search Now
           </button>
         </div>
       </header>
 
-      <section style={styles.categoriesContainer}>
-        <h2 style={styles.sectionTitle}>Popular Categories</h2>
-        <div style={styles.categories}>
+      <section class="categoriesContainer" style={styles.categoriesContainer}>
+        <h2 class="sectionTitle" style={styles.sectionTitle}>Popular Categories</h2>
+        <div class="categories" style={styles.categories}>
           {categories.map((category, index) => (
             <div
               key={index}
-              style={styles.categoryCard}
+              class="categoryCard" style={styles.categoryCard}
               onClick={() => handleListingClick(category.id)} // Redirect to listings page with selected category
             >
-              <span style={styles.categoryIcon}>📦</span>
-              <h3 style={styles.categoryName}>{category.name}</h3>
+              <span class="categoryIcon" style={styles.categoryIcon}>📦</span>
+              <h3 class="categoryName}>{category.name" style={styles.categoryName}>{category.name}</h3>
             </div>
           ))}
         </div>
       </section>
 
-      <section style={styles.listingsContainer}>
-        <h2 style={styles.sectionTitle}>Listings Near You</h2>
-        <div style={styles.listings}>
+      <section class="listingsContainer" style={styles.listingsContainer}>
+        <h2 class="sectionTitle" style={styles.sectionTitle}>Listings Near You</h2>
+        <div class="listings" style={styles.listings}>
           {listings.map((listing, index) => (
             <div
               key={index}
-              style={styles.listingCard}
+              class="listingCard" style={styles.listingCard}
               onClick={() => handleListingClick(listing.id)} // Redirect to Listing Detail page
             >
-              <h3 style={styles.listingTitle}>{listing.title}</h3>
-              <p style={styles.listingDescription}>{listing.description}</p>
-              <p style={styles.listingPrice}>${listing.price}</p>
+              <h3 class="listingTitle" style={styles.listingTitle}>{listing.title}</h3>
+              <p class="listingDescription" style={styles.listingDescription}>{listing.description}</p>
+              <p class="listingPrice" style={styles.listingPrice}>${listing.price}</p>
             </div>
           ))}
         </div>
