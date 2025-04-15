@@ -1,4 +1,3 @@
-
 # community_api/views.py
 
 from rest_framework.views import APIView
@@ -7,6 +6,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.decorators import action
 
 # Firebase Admin
 from firebase_admin import auth as firebase_auth
@@ -99,7 +99,7 @@ class ListingTagViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
 
-# 💬 Messages CRUD scoped to sender
+# 💬 Messages CRUD scoped to sender + inbox endpoint
 class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -109,3 +109,10 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(sender=self.request.user)
+
+    @action(detail=False, methods=["get"], url_path="inbox")
+    def inbox(self, request):
+        user = request.user
+        messages = Message.objects.filter(listing__user=user).order_by("-created_at")
+        serializer = self.get_serializer(messages, many=True)
+        return Response(serializer.data)
