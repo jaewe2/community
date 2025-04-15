@@ -6,10 +6,18 @@ npm install react-icons
 
 npm install react-router-dom react-icons react-toastify firebase
 
+npm install peerjs
+
+npm install socket.io-client
+
 
 backend dependencies:
 
 pip install Django djangorestframework firebase-admin django-cors-headers Pillow
+
+pip install channels
+
+pip install channels_redis
 
 
 To start frontend:
