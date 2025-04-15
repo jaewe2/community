@@ -8,6 +8,7 @@ class CommunityUser(AbstractUser):
     is_buyer = models.BooleanField(default=True)
     is_seller = models.BooleanField(default=True)  # ✅ Default set to True
     is_admin = models.BooleanField(default=False)
+    profile_picture = models.ImageField(upload_to="profile_pictures/", null=True, blank=True)  # ✅ Added
 
     def __str__(self):
         return self.email or self.username
@@ -93,4 +94,3 @@ class Message(models.Model):
 
     class Meta:
         ordering = ['created_at']
-

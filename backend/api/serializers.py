@@ -7,7 +7,7 @@ from .models import (
     Favorite,
     Tag,
     ListingTag,
-    Message,
+    Message
 )
 
 User = get_user_model()
@@ -45,7 +45,7 @@ class ListingTagSerializer(serializers.ModelSerializer):
 # CommunityPosting Serializer
 class CommunityPostingSerializer(serializers.ModelSerializer):
     user = serializers.ReadOnlyField(source='user.email')
-    user_id = serializers.ReadOnlyField(source='user.id')  # ✅ Added for frontend message posting
+    user_id = serializers.ReadOnlyField(source='user.id')
     category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
     category_name = serializers.CharField(source='category.name', read_only=True)
     images = PostingImageSerializer(many=True, read_only=True)
@@ -69,7 +69,7 @@ class FavoriteSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'listing', 'listing_title', 'listing_images', 'created_at']
 
 
-# Full Message Serializer (for GET responses)
+# Full Message Serializer
 class MessageSerializer(serializers.ModelSerializer):
     sender = serializers.ReadOnlyField(source='sender.email')
     recipient = serializers.ReadOnlyField(source='recipient.email')
@@ -83,7 +83,7 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = ['id', 'listing', 'listing_title', 'sender', 'recipient', 'content', 'created_at', 'parent_message', 'read']
 
 
-# Simplified Message Create Serializer (for POST only)
+# Simplified Message Create Serializer
 class MessageCreateSerializer(serializers.ModelSerializer):
     sender = serializers.ReadOnlyField(source='sender.email')
     recipient = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
@@ -94,3 +94,15 @@ class MessageCreateSerializer(serializers.ModelSerializer):
         model = Message
         fields = ['id', 'sender', 'recipient', 'listing', 'content']
 
+
+# 🔐 User Profile Serializer
+class UserProfileSerializer(serializers.ModelSerializer):
+    profile_picture = serializers.ImageField(required=False, allow_null=True)
+
+    class Meta:
+        model = User
+        fields = [
+            'id', 'email', 'username', 'first_name', 'last_name',
+            'profile_picture', 'is_buyer', 'is_seller', 'is_admin'
+        ]
+        read_only_fields = ['email', 'is_buyer', 'is_seller', 'is_admin']

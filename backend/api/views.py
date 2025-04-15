@@ -17,8 +17,12 @@ from .models import (
 )
 from .serializers import (
     CommunityPostingSerializer, CategorySerializer, FavoriteSerializer,
-    TagSerializer, ListingTagSerializer, MessageSerializer, MessageCreateSerializer  # ✅ Added MessageCreateSerializer
+    TagSerializer, ListingTagSerializer, MessageSerializer, MessageCreateSerializer,
+    UserProfileSerializer  # Added for user profile
 )
+
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 # 🔓 Public HelloWorld
 class HelloWorldView(APIView):
@@ -116,7 +120,7 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def get_serializer_class(self):
         if self.action == 'create':
-            return MessageCreateSerializer  # ✅ Use lightweight serializer for POST
+            return MessageCreateSerializer
         return MessageSerializer
 
     def perform_create(self, serializer):
@@ -160,10 +164,10 @@ class MessageViewSet(viewsets.ModelViewSet):
     def reply(self, request, pk=None):
         original_message = self.get_object()
         content = request.data.get("content")
-        
+
         if not content:
             return Response({"error": "Content is required."}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         new_message = Message.objects.create(
             listing=original_message.listing,
             sender=request.user,
@@ -174,16 +178,37 @@ class MessageViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-# 👤 User Profile View (for fetching user profile)
+# 👤 User Profile View (GET, PATCH, PUT)
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     def get(self, request):
+        """
+        Get the user profile details.
+        """
         user = request.user
-        return Response({
-            "id": user.id,
-            "email": user.email,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "username": user.username
-        })
+        serializer = UserProfileSerializer(user)
+        return Response(serializer.data)
+
+    def put(self, request):
+        """
+        Update the full user profile (replace all fields).
+        """
+        user = request.user
+        serializer = UserProfileSerializer(user, data=request.data, partial=False)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request):
+        """
+        Partially update the user profile.
+        """
+        user = request.user
+        serializer = UserProfileSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

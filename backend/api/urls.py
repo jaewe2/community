@@ -9,10 +9,9 @@ from .views import (
     TagViewSet,
     ListingTagViewSet,
     MessageViewSet,
-    UserProfileView,  # Add the UserProfileView import
+    UserProfileView,  # ✅ UserProfileView import
 )
 
-# This router is for REST API
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
@@ -28,12 +27,12 @@ urlpatterns = [
     path('hello/', HelloWorldView.as_view(), name='hello'),
     path('verify-token/', VerifyFirebaseToken.as_view(), name='verify-token'),
     path('postings/<int:id>/', PostingDetailView.as_view(), name='posting-detail'),
-    
-    # Add the user profile path here
-    path('user/profile/', UserProfileView.as_view(), name='user-profile'),  # New path for user profile
+
+    # 👤 Profile routes
+    path('user/profile/', UserProfileView.as_view(), name='user-profile'),
+    path('user/profile/update', UserProfileView.as_view(), name='user-profile-update'),  # ✅ PATCH
 ]
 
-# Include WebSocket routing from messaging_urls
-from api.messaging_urls import websocket_urlpatterns  # Import WebSocket URL patterns
-urlpatterns += websocket_urlpatterns  # Append WebSocket routes to URL patterns
-
+# Append WebSocket routing if needed
+from api.messaging_urls import websocket_urlpatterns
+urlpatterns += websocket_urlpatterns
