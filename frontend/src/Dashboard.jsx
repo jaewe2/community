@@ -5,8 +5,10 @@ import { useNavigate } from "react-router-dom"; // Import useNavigate
 
 const LandingPage = () => {
   const [categories, setCategories] = useState([]);
+  const [allListings, setAllListings] = useState([]);
   const [listings, setListings] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  // Update: store category name in state for the dropdown
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [loading, setLoading] = useState(true);
@@ -23,9 +25,10 @@ const LandingPage = () => {
         const categoryResponse = await axios.get("http://127.0.0.1:8000/api/categories/");
         setCategories(categoryResponse.data);
 
-        // Fetch listings
+        // Fetch listings (if you want to display them on the landing page)
         const listingsResponse = await axios.get("http://127.0.0.1:8000/api/postings/");
         setListings(listingsResponse.data);
+        setAllListings(listingsResponse.data); // Store the full listings data separately
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -36,7 +39,7 @@ const LandingPage = () => {
     fetchData();
   }, []);
 
-  // Handle search query change with debouncing
+  // Handle search query change with debouncing (still used for suggestions)
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
@@ -45,26 +48,7 @@ const LandingPage = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Handle search functionality
-  const handleSearch = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get("http://127.0.0.1:8000/api/postings/", {
-        params: {
-          search: debouncedSearch,
-          category: selectedCategory,
-          location: selectedLocation,
-        },
-      });
-      setListings(response.data); // Update listings with search results
-    } catch (error) {
-      console.error("Error fetching search results:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle search suggestions (e.g., categories)
+  // Handle search suggestions (e.g., matching category names)
   const handleSearchSuggestions = (query) => {
     if (query.length > 2) {
       // Only show suggestions if query length is more than 2 characters
@@ -77,12 +61,21 @@ const LandingPage = () => {
     }
   };
 
-  // Navigate to Listing Detail page when a listing is clicked
-  const handleListingClick = (listingId) => {
-    navigate(`/listing-detail/${listingId}`); // Navigate to the Listing Detail page
+  // Redirect to the Listings page with search parameters in the URL.
+  const handleSearch = () => {
+    const queryParams = new URLSearchParams();
+    if (searchQuery) queryParams.set("search", searchQuery);
+    if (selectedCategory) queryParams.set("cat", selectedCategory);
+    if (selectedLocation) queryParams.set("location", selectedLocation);
+    navigate(`/listings?${queryParams.toString()}`);
   };
 
-  // Navigate to Listings page with a selected category filter
+  // Navigate to Listing Detail page when a listing is clicked.
+  const handleListingClick = (listingId) => {
+    navigate(`/listing-detail/${listingId}`); // Navigate to the Listing Detail page.
+  };
+
+  // Navigate to Listings page with a selected category filter (by category name).
   const handleCategoryClick = (categoryName) => {
     navigate(`/listings?cat=${encodeURIComponent(categoryName)}`);
   };
@@ -102,8 +95,8 @@ const LandingPage = () => {
             placeholder="What are you looking for?"
             value={searchQuery}
             onChange={(e) => {
-              setSearchQuery(e.target.value); // Capture search query
-              handleSearchSuggestions(e.target.value); // Update search suggestions
+              setSearchQuery(e.target.value);
+              handleSearchSuggestions(e.target.value);
             }}
             style={styles.searchInput}
           />
@@ -116,14 +109,15 @@ const LandingPage = () => {
               ))}
             </div>
           )}
+          {/* Updated dropdown uses category name as value */}
           <select
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)} // Capture selected category
+            onChange={(e) => setSelectedCategory(e.target.value)}
             style={styles.selectInput}
           >
             <option value="">Category</option>
             {categories.map((category) => (
-              <option key={category.id} value={category.id}>
+              <option key={category.id} value={category.name}>
                 {category.name}
               </option>
             ))}
@@ -132,7 +126,7 @@ const LandingPage = () => {
             type="text"
             placeholder="Location"
             value={selectedLocation}
-            onChange={(e) => setSelectedLocation(e.target.value)} // Capture selected location
+            onChange={(e) => setSelectedLocation(e.target.value)}
             style={styles.searchInput}
           />
           <button onClick={handleSearch} style={styles.searchButton}>
@@ -148,7 +142,7 @@ const LandingPage = () => {
             <div
               key={index}
               style={styles.categoryCard}
-              onClick={() => handleCategoryClick(category.name)} // Redirect to listings page with selected category
+              onClick={() => handleCategoryClick(category.name)}
             >
               <span style={styles.categoryIcon}>📦</span>
               <h3 style={styles.categoryName}>{category.name}</h3>
@@ -157,6 +151,7 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* Optional: Display listings on the landing page */}
       <section style={styles.listingsContainer}>
         <h2 style={styles.sectionTitle}>Listings Near You</h2>
         <div style={styles.listings}>
@@ -164,7 +159,7 @@ const LandingPage = () => {
             <div
               key={index}
               style={styles.listingCard}
-              onClick={() => handleListingClick(listing.id)} // Redirect to Listing Detail page
+              onClick={() => handleListingClick(listing.id)}
             >
               <h3 style={styles.listingTitle}>{listing.title}</h3>
               <p style={styles.listingDescription}>{listing.description}</p>
