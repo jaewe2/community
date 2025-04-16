@@ -64,17 +64,16 @@ export default function Favorites() {
       ) : (
         <div style={styles.grid}>
           {favorites.map((fav) => {
-            const img =
-              fav.listing_images?.[0]?.url ||
-              fav.listing_images?.[0]?.image ||
-              "https://via.placeholder.com/320x200?text=No+Image";
+            // Get the image from listing_images, no default placeholder
+            const img = fav.listing_images?.[0]?.url || fav.listing_images?.[0]?.image;
             return (
               <div
                 key={fav.id}
                 style={styles.card}
-                onClick={() => navigate(`/listing/${fav.listing}`)}
+                // Updated onClick to use the correct route for listing details
+                onClick={() => navigate(`/listing-detail/${fav.listing}`)}
               >
-                <img src={img} alt="Listing" style={styles.image} />
+                {img && <img src={img} alt="Listing" style={styles.image} />}
                 <h4>{fav.listing_title}</h4>
                 <button
                   onClick={(e) => {
@@ -97,17 +96,13 @@ export default function Favorites() {
             <h3>Remove Favorite</h3>
             <p>
               Are you sure you want to remove{" "}
-              <strong>{selectedFavorite?.listing_title}</strong> from your
-              favorites?
+              <strong>{selectedFavorite?.listing_title}</strong> from your favorites?
             </p>
             <div style={styles.modalActions}>
               <button onClick={handleRemove} style={styles.confirmBtn}>
                 Yes, Remove
               </button>
-              <button
-                onClick={() => setShowModal(false)}
-                style={styles.cancelBtn}
-              >
+              <button onClick={() => setShowModal(false)} style={styles.cancelBtn}>
                 Cancel
               </button>
             </div>
