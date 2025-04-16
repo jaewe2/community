@@ -163,7 +163,8 @@ export default function ListingsPage() {
 
             return (
               <div key={item.id} style={styles.cardWrapper}>
-                <Link to={`/listing/${item.id}`} style={styles.link}>
+                {/* Updated Link to match ListingDetail route */}
+                <Link to={`/listing-detail/${item.id}`} style={styles.link}>
                   <div
                     style={styles.card}
                     onMouseEnter={(e) => {

@@ -8,12 +8,14 @@ const LandingPage = () => {
   const [allListings, setAllListings] = useState([]);
   const [listings, setListings] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  // Update: store category name in state for the dropdown
+  // Store category name in state for the dropdown
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [loading, setLoading] = useState(true);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [searchSuggestions, setSearchSuggestions] = useState([]);
+  // New state to store geolocation coordinates
+  const [geoCoordinates, setGeoCoordinates] = useState({ lat: null, lng: null });
 
   const navigate = useNavigate(); // useNavigate hook to navigate programmatically
 
@@ -48,6 +50,24 @@ const LandingPage = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Get the user's current geolocation when the component mounts
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setGeoCoordinates({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        (error) => {
+          console.error("Error obtaining geolocation:", error);
+          // Optionally, you can prompt the user for manual input if geolocation fails.
+        }
+      );
+    }
+  }, []);
+
   // Handle search suggestions (e.g., matching category names)
   const handleSearchSuggestions = (query) => {
     if (query.length > 2) {
@@ -61,12 +81,17 @@ const LandingPage = () => {
     }
   };
 
-  // Redirect to the Listings page with search parameters in the URL.
+  // Redirect to the Listings page with search parameters (including geolocation) in the URL.
   const handleSearch = () => {
     const queryParams = new URLSearchParams();
     if (searchQuery) queryParams.set("search", searchQuery);
     if (selectedCategory) queryParams.set("cat", selectedCategory);
     if (selectedLocation) queryParams.set("location", selectedLocation);
+    // Add geolocation parameters if available
+    if (geoCoordinates.lat && geoCoordinates.lng) {
+      queryParams.set("lat", geoCoordinates.lat);
+      queryParams.set("lng", geoCoordinates.lng);
+    }
     navigate(`/listings?${queryParams.toString()}`);
   };
 
@@ -179,7 +204,7 @@ const styles = {
     backgroundColor: "#f4f4f4",
   },
   header: {
-    backgroundColor: "#5A2D76", // Maroon color
+    backgroundColor: "#5A2D76",
     padding: "3rem 1.5rem",
     color: "#fff",
     borderRadius: "8px",
