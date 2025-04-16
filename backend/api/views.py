@@ -18,7 +18,7 @@ from .models import (
 from .serializers import (
     CommunityPostingSerializer, CategorySerializer, FavoriteSerializer,
     TagSerializer, ListingTagSerializer, MessageSerializer, MessageCreateSerializer,
-    UserProfileSerializer  # Added for user profile
+    UserProfileSerializer
 )
 
 from django.contrib.auth import get_user_model
@@ -178,7 +178,7 @@ class MessageViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-# 👤 User Profile View (GET, PATCH, PUT)
+# 👤 User Profile View (GET, PUT, PATCH)
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]

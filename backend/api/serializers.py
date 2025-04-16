@@ -12,28 +12,28 @@ from .models import (
 
 User = get_user_model()
 
-# Category Serializer
+# 📂 Category Serializer
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = '__all__'
 
 
-# Posting Image Serializer
+# 🖼️ Posting Image Serializer
 class PostingImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = PostingImage
         fields = ['id', 'image']
 
 
-# Tag Serializer
+# 🔖 Tag Serializer
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         fields = ['id', 'name']
 
 
-# ListingTag Serializer
+# 🔗 ListingTag Serializer
 class ListingTagSerializer(serializers.ModelSerializer):
     tag = TagSerializer(read_only=True)
 
@@ -42,7 +42,7 @@ class ListingTagSerializer(serializers.ModelSerializer):
         fields = ['id', 'tag']
 
 
-# CommunityPosting Serializer
+# 📦 CommunityPosting Serializer
 class CommunityPostingSerializer(serializers.ModelSerializer):
     user = serializers.ReadOnlyField(source='user.email')
     user_id = serializers.ReadOnlyField(source='user.id')
@@ -57,7 +57,7 @@ class CommunityPostingSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-# Favorite Serializer
+# ❤️ Favorite Serializer
 class FavoriteSerializer(serializers.ModelSerializer):
     user = serializers.ReadOnlyField(source='user.email')
     listing = serializers.PrimaryKeyRelatedField(queryset=CommunityPosting.objects.all())
@@ -69,7 +69,7 @@ class FavoriteSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'listing', 'listing_title', 'listing_images', 'created_at']
 
 
-# Full Message Serializer
+# 💬 Full Message Serializer
 class MessageSerializer(serializers.ModelSerializer):
     sender = serializers.ReadOnlyField(source='sender.email')
     recipient = serializers.ReadOnlyField(source='recipient.email')
@@ -83,7 +83,7 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = ['id', 'listing', 'listing_title', 'sender', 'recipient', 'content', 'created_at', 'parent_message', 'read']
 
 
-# Simplified Message Create Serializer
+# ✉️ Simplified Message Create Serializer
 class MessageCreateSerializer(serializers.ModelSerializer):
     sender = serializers.ReadOnlyField(source='sender.email')
     recipient = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
@@ -95,7 +95,7 @@ class MessageCreateSerializer(serializers.ModelSerializer):
         fields = ['id', 'sender', 'recipient', 'listing', 'content']
 
 
-# 🔐 User Profile Serializer
+# 🔐 User Profile Serializer (UPDATED for Account Settings)
 class UserProfileSerializer(serializers.ModelSerializer):
     profile_picture = serializers.ImageField(required=False, allow_null=True)
 
@@ -103,6 +103,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'email', 'username', 'first_name', 'last_name',
-            'profile_picture', 'is_buyer', 'is_seller', 'is_admin'
+            'profile_picture', 'company_name', 'display_as_company', 'phone_number',
+            'is_buyer', 'is_seller', 'is_admin'
         ]
-        read_only_fields = ['email', 'is_buyer', 'is_seller', 'is_admin']
+        read_only_fields = ['email', 'username', 'is_buyer', 'is_seller', 'is_admin']

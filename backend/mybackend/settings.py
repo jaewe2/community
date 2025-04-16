@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 
 # Base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -113,5 +114,3 @@ CHANNEL_LAYERS = {
         },
     },
 }
-
-
