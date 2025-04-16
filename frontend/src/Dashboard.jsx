@@ -12,7 +12,7 @@ const LandingPage = () => {
   const [loading, setLoading] = useState(true);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [searchSuggestions, setSearchSuggestions] = useState([]);
-  
+
   const navigate = useNavigate(); // useNavigate hook to navigate programmatically
 
   // Fetch categories and listings from the backend
@@ -82,6 +82,11 @@ const LandingPage = () => {
     navigate(`/listing-detail/${listingId}`); // Navigate to the Listing Detail page
   };
 
+  // Navigate to Listings page with a selected category filter
+  const handleCategoryClick = (categoryName) => {
+    navigate(`/listings?cat=${encodeURIComponent(categoryName)}`);
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -143,7 +148,7 @@ const LandingPage = () => {
             <div
               key={index}
               style={styles.categoryCard}
-              onClick={() => handleListingClick(category.id)} // Redirect to listings page with selected category
+              onClick={() => handleCategoryClick(category.name)} // Redirect to listings page with selected category
             >
               <span style={styles.categoryIcon}>📦</span>
               <h3 style={styles.categoryName}>{category.name}</h3>
@@ -198,6 +203,7 @@ const styles = {
     display: "flex",
     justifyContent: "center",
     gap: "1rem",
+    position: "relative",
   },
   searchInput: {
     padding: "0.5rem",
@@ -250,7 +256,7 @@ const styles = {
     borderRadius: "8px",
     padding: "1.5rem",
     boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)",
-    cursor: "pointer",  // Makes it clickable
+    cursor: "pointer",
   },
   categoryIcon: {
     fontSize: "2rem",
@@ -273,7 +279,7 @@ const styles = {
     borderRadius: "8px",
     padding: "1.5rem",
     boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)",
-    cursor: "pointer",  // Makes it look clickable
+    cursor: "pointer",
   },
   listingTitle: {
     fontSize: "1.4rem",

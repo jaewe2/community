@@ -60,14 +60,11 @@ export default function ListingsPage() {
       });
     }
 
-    // Ensure category is treated as a string before using toLowerCase
+    // Using category_name for filtering
     if (selectedCategory) {
       results = results.filter((item) => {
-        const category = item.category;
-        return (
-          typeof category === "string" &&
-          category.toLowerCase() === selectedCategory.toLowerCase()
-        );
+        const categoryName = item.category_name || "";
+        return categoryName.toLowerCase() === selectedCategory.toLowerCase();
       });
     }
 
@@ -107,8 +104,8 @@ export default function ListingsPage() {
   };
 
   const handleDelete = async (listingId) => {
-    const confirm = window.confirm("Are you sure you want to delete this listing?");
-    if (!confirm) return;
+    const confirmDelete = window.confirm("Are you sure you want to delete this listing?");
+    if (!confirmDelete) return;
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -136,7 +133,9 @@ export default function ListingsPage() {
         <select value={selectedCategory} onChange={handleCategoryChange} style={styles.select}>
           <option value="">All Categories</option>
           {categories.map((cat) => (
-            <option key={cat.id} value={cat.name}>{cat.name}</option>
+            <option key={cat.id} value={cat.name}>
+              {cat.name}
+            </option>
           ))}
         </select>
 
@@ -186,8 +185,12 @@ export default function ListingsPage() {
                     />
                     <h3 style={styles.title}>{item.title}</h3>
                     <p style={styles.price}>${item.price}</p>
-                    <p style={styles.meta}><strong>Location:</strong> {item.location}</p>
-                    <p style={styles.meta}><strong>Category:</strong> {item.category_name || item.category}</p>
+                    <p style={styles.meta}>
+                      <strong>Location:</strong> {item.location}
+                    </p>
+                    <p style={styles.meta}>
+                      <strong>Category:</strong> {item.category_name || item.category}
+                    </p>
                     <p style={styles.description}>{item.description}</p>
                     <p style={styles.date}>
                       Posted on {new Date(item.created_at).toLocaleDateString()}
@@ -202,10 +205,7 @@ export default function ListingsPage() {
                   </div>
                 </Link>
                 {user?.id === item.user && (
-                  <button
-                    onClick={() => handleDelete(item.id)}
-                    style={styles.deleteBtn}
-                  >
+                  <button onClick={() => handleDelete(item.id)} style={styles.deleteBtn}>
                     <FaTrash /> Delete Listing
                   </button>
                 )}
