@@ -1,3 +1,5 @@
+# api/views.py
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import viewsets, permissions, status
@@ -7,9 +9,11 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.decorators import action
 from django.db.models import Q
 import json
+
 from firebase_admin import auth as firebase_auth
 import api.firebase_admin_setup
 
+from django.contrib.auth import get_user_model
 from .models import (
     CommunityPosting, Category, PostingImage, Favorite, Tag, ListingTag, Message
 )
@@ -19,16 +23,15 @@ from .serializers import (
     UserProfileSerializer
 )
 
-from django.contrib.auth import get_user_model
 User = get_user_model()
 
-# Hello world
+# 🔓 Public HelloWorld
 class HelloWorldView(APIView):
     def get(self, request):
         return Response({"message": "Hello from Django!"})
 
 
-# Firebase Token Verification
+# 🔐 Firebase Token Verification
 class VerifyFirebaseToken(APIView):
     permission_classes = [AllowAny]
 
@@ -37,16 +40,16 @@ class VerifyFirebaseToken(APIView):
         if not id_token:
             return Response({"error": "Token missing"}, status=400)
         try:
-            decoded_token = firebase_auth.verify_id_token(id_token)
+            decoded = firebase_auth.verify_id_token(id_token)
             return Response({
-                "uid": decoded_token["uid"],
-                "email": decoded_token.get("email"),
+                "uid": decoded["uid"],
+                "email": decoded.get("email"),
             })
         except Exception as e:
             return Response({"error": str(e)}, status=401)
 
 
-# Single Listing Detail
+# 📄 Individual Listing Detail
 class PostingDetailView(RetrieveAPIView):
     queryset = CommunityPosting.objects.all()
     serializer_class = CommunityPostingSerializer
@@ -54,12 +57,33 @@ class PostingDetailView(RetrieveAPIView):
     lookup_field = 'id'
 
 
-# Listing CRUD + File Upload
+# 📦 Postings CRUD + "my ads" support
 class CommunityPostingViewSet(viewsets.ModelViewSet):
-    queryset = CommunityPosting.objects.all()
     serializer_class = CommunityPostingSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     parser_classes = [MultiPartParser, FormParser]
+
+    def get_queryset(self):
+        qs = CommunityPosting.objects.all().order_by('-created_at')
+        # if listing the root endpoint, allow '?mine=true' to filter
+        if self.action == 'list' and self.request.user.is_authenticated:
+            if self.request.query_params.get('mine') in ['true', '1', 'yes']:
+                qs = qs.filter(user=self.request.user)
+        return qs
+
+    @action(detail=False, methods=['get'], url_path='my-ads', permission_classes=[IsAuthenticated])
+    def my_ads(self, request):
+        """
+        GET /api/postings/my-ads/
+        Returns only the postings owned by the authenticated user.
+        """
+        qs = CommunityPosting.objects.filter(user=request.user).order_by('-created_at')
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
 
     def perform_create(self, serializer):
         posting = serializer.save(user=self.request.user)
@@ -68,34 +92,36 @@ class CommunityPostingViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         posting = serializer.save()
-        images = self.request.FILES.getlist("images")
+        # handle new uploads
+        for image in self.request.FILES.getlist("images"):
+            PostingImage.objects.create(posting=posting, image=image)
+        # handle deletions
         deleted_ids = self.request.data.getlist("deleted_images")
-
         try:
             deleted_ids = [int(i) for i in deleted_ids if str(i).isdigit()]
             if deleted_ids:
                 PostingImage.objects.filter(posting=posting, id__in=deleted_ids).delete()
         except Exception as e:
-            print("Error converting deleted_images to ints:", e)
-
-        for image in images:
-            PostingImage.objects.create(posting=posting, image=image)
+            print("Error parsing deleted_images:", e)
 
     def destroy(self, request, *args, **kwargs):
         posting = self.get_object()
         if posting.user != request.user:
-            return Response({"error": "You can only delete your own listings."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"error": "You can only delete your own listings."},
+                status=status.HTTP_403_FORBIDDEN
+            )
         return super().destroy(request, *args, **kwargs)
 
 
-# Category CRUD
+# 📚 Categories CRUD
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [AllowAny]
 
 
-# Favorites CRUD
+# ❤️ Favorites CRUD scoped to user
 class FavoriteViewSet(viewsets.ModelViewSet):
     serializer_class = FavoriteSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -107,21 +133,21 @@ class FavoriteViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
 
-# Tag CRUD
+# 🔖 Tags CRUD
 class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = [AllowAny]
 
 
-# Listing Tags
+# 🔗 Listing-Tag Relation
 class ListingTagViewSet(viewsets.ModelViewSet):
     queryset = ListingTag.objects.all()
     serializer_class = ListingTagSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
 
-# Message CRUD
+# 💬 Messages CRUD
 class MessageViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -138,8 +164,8 @@ class MessageViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="inbox")
     def inbox(self, request):
         user = request.user
-        messages = Message.objects.filter(Q(sender=user) | Q(recipient=user)).order_by('-created_at')
-        serializer = self.get_serializer(messages, many=True)
+        msgs = Message.objects.filter(Q(sender=user) | Q(recipient=user)).order_by('-created_at')
+        serializer = self.get_serializer(msgs, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=["post"], url_path="send")
@@ -149,76 +175,75 @@ class MessageViewSet(viewsets.ModelViewSet):
         content = request.data.get("content")
         listing_id = request.data.get("listing_id")
 
-        if not recipient_id or not content or not listing_id:
-            return Response({"error": "Recipient, content, and listing_id are required."}, status=400)
+        if not (recipient_id and content and listing_id):
+            return Response(
+                {"error": "recipient_id, content & listing_id are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
-            recipient = User.objects.get(id=recipient_id)
             listing = CommunityPosting.objects.get(id=listing_id)
-        except (User.DoesNotExist, CommunityPosting.DoesNotExist):
-            return Response({"error": "Invalid recipient or listing."}, status=400)
+            recipient = User.objects.get(id=recipient_id)
+        except (CommunityPosting.DoesNotExist, User.DoesNotExist):
+            return Response({"error": "Invalid listing or recipient."}, status=status.HTTP_400_BAD_REQUEST)
 
         if listing.user == sender:
-            return Response({"error": "You cannot message your own listing."}, status=403)
+            return Response({"error": "Cannot message your own listing."}, status=status.HTTP_403_FORBIDDEN)
 
-        message = Message.objects.create(
+        msg = Message.objects.create(
             sender=sender,
             recipient=recipient,
             content=content,
             listing=listing
         )
-        return Response(MessageSerializer(message).data, status=201)
+        return Response(MessageSerializer(msg).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"], url_path="reply")
     def reply(self, request, pk=None):
-        original_message = self.get_object()
+        orig = self.get_object()
         content = request.data.get("content")
         if not content:
-            return Response({"error": "Content is required."}, status=status.HTTP_400_BAD_REQUEST)
-        new_message = Message.objects.create(
-            listing=original_message.listing,
+            return Response({"error": "Content required."}, status=status.HTTP_400_BAD_REQUEST)
+        reply = Message.objects.create(
+            listing=orig.listing,
             sender=request.user,
-            recipient=original_message.sender,
+            recipient=orig.sender,
             content=content
         )
-        serializer = MessageSerializer(new_message)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(MessageSerializer(reply).data, status=status.HTTP_201_CREATED)
 
 
-# Authenticated User Profile
+# 👤 User Profile (Account Settings)
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
     def get(self, request):
         user = request.user
-        if not user:
-            return Response({"error": "User not authenticated"}, status=401)
+        # Ensure Firebase token -> Django user
         try:
             id_token = request.META.get("HTTP_AUTHORIZATION", "").split(" ")[-1]
             decoded = firebase_auth.verify_id_token(id_token)
-            firebase_email = decoded.get("email")
+            email = decoded.get("email")
             user, _ = User.objects.get_or_create(
-                email=firebase_email,
-                defaults={"username": firebase_email.split("@")[0], "is_active": True}
+                email=email,
+                defaults={"username": email.split("@")[0], "is_active": True}
             )
         except Exception as e:
-            print("Failed to verify or create user:", e)
-            return Response({"error": "Token verification failed"}, status=401)
+            return Response({"error": "Invalid token."}, status=status.HTTP_401_UNAUTHORIZED)
+
         serializer = UserProfileSerializer(user)
         return Response(serializer.data)
 
     def put(self, request):
-        user = request.user
-        serializer = UserProfileSerializer(user, data=request.data)
+        serializer = UserProfileSerializer(request.user, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request):
-        user = request.user
-        serializer = UserProfileSerializer(user, data=request.data, partial=True)
+        serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
