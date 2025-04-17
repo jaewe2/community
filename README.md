@@ -10,6 +10,8 @@ npm install peerjs
 
 npm install socket.io-client
 
+npm install jspdf
+
 
 backend dependencies:
 
