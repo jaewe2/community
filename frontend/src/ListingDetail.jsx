@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   FaMapMarkerAlt,
   FaDollarSign,
   FaArrowLeft,
   FaHeart,
   FaTag,
+  FaTrash,
 } from "react-icons/fa";
 import { auth } from "./firebase";
 import { toast } from "react-toastify";
@@ -18,6 +19,7 @@ export default function ListingDetail() {
   const [favoriteId, setFavoriteId] = useState(null);
   const [messageContent, setMessageContent] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [currentUserId, setCurrentUserId] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -64,9 +66,22 @@ export default function ListingDetail() {
       }
     };
 
+    const fetchUserId = async () => {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) return;
+      const res = await fetch("http://127.0.0.1:8000/api/user/profile", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+      setCurrentUserId(data.id);
+    };
+
     if (auth.currentUser) {
       fetchUserEmail();
       checkFavorite();
+      fetchUserId();
     }
   }, [id]);
 
@@ -91,13 +106,32 @@ export default function ListingDetail() {
           },
           body: JSON.stringify({ listing: id }),
         });
-
         const data = await res.json();
         setLiked(true);
         setFavoriteId(data.id);
       }
     } catch (err) {
       console.error("Error toggling favorite:", err);
+    }
+  };
+
+  const handleDelete = async () => {
+    const confirm = window.confirm("Are you sure you want to delete this listing?");
+    if (!confirm) return;
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch(`http://127.0.0.1:8000/api/postings/${id}/`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) throw new Error("Delete failed");
+      toast.success("Listing deleted");
+      navigate("/listings");
+    } catch (err) {
+      console.error(err);
+      toast.error("Error deleting listing");
     }
   };
 
@@ -116,7 +150,7 @@ export default function ListingDetail() {
         body: JSON.stringify({
           listing: id,
           content: messageContent,
-          recipient: listing.user_id, // ✅ Added this line
+          recipient: listing.user_id,
         }),
       });
 
@@ -147,27 +181,6 @@ export default function ListingDetail() {
         </div>
       )}
 
-      {listing.images?.length > 1 && (
-        <div style={styles.thumbnailRow}>
-          {listing.images.map((img, idx) => {
-            const url = img.url || img.image;
-            return (
-              <img
-                key={idx}
-                src={url}
-                alt={`Thumb ${idx}`}
-                onClick={() => setMainImage(url)}
-                style={{
-                  ...styles.thumbnail,
-                  border:
-                    url === mainImage ? "2px solid #007bff" : "1px solid #ccc",
-                }}
-              />
-            );
-          })}
-        </div>
-      )}
-
       <div style={styles.headerRow}>
         <h2 style={styles.title}>{listing.title}</h2>
         <FaHeart
@@ -179,34 +192,37 @@ export default function ListingDetail() {
         />
       </div>
 
-      <p style={styles.price}>
-        <FaDollarSign /> ${listing.price}
-      </p>
-      <p>
-        <FaMapMarkerAlt /> {listing.location}
-      </p>
-      <p>
-        <FaTag /> {listing.category_name || listing.category}
-      </p>
+      {currentUserId === listing.user_id && (
+        <div style={styles.actionRow}>
+          <Link to={`/edit-listing/${listing.id}`} style={styles.editBtn}>
+            ✏️ Edit Listing
+          </Link>
+          <button onClick={handleDelete} style={styles.deleteBtn}>
+            <FaTrash style={{ marginRight: "5px" }} /> Delete Listing
+          </button>
+        </div>
+      )}
+
+      <div style={styles.detailBlock}>
+        <p style={styles.price}><FaDollarSign /> ${listing.price}</p>
+        <p><FaMapMarkerAlt /> {listing.location}</p>
+        <p><FaTag /> {listing.category_name || listing.category}</p>
+      </div>
+
       <p style={styles.description}>{listing.description}</p>
-      <p style={styles.date}>
-        Posted on {new Date(listing.created_at).toLocaleDateString()}
-      </p>
+      <p style={styles.date}>Posted on {new Date(listing.created_at).toLocaleDateString()}</p>
 
       {listing.tags?.length > 0 && (
         <div style={styles.tagsSection}>
           <h4>Tags:</h4>
           <div style={styles.tagsRow}>
             {listing.tags.map((tag, idx) => (
-              <span key={idx} style={styles.tag}>
-                {tag.name}
-              </span>
+              <span key={idx} style={styles.tag}>{tag.name}</span>
             ))}
           </div>
         </div>
       )}
 
-      {/* Messaging Section */}
       <div style={styles.messageBox}>
         <h4>Contact Seller</h4>
         <form onSubmit={handleSendMessage} style={styles.messageForm}>
@@ -236,60 +252,13 @@ export default function ListingDetail() {
 
 const styles = {
   container: {
-    maxWidth: "800px",
+    maxWidth: "860px",
     margin: "2rem auto",
     padding: "2rem",
     background: "#fff",
     borderRadius: "12px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+    boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
     fontFamily: "'Segoe UI', sans-serif",
-  },
-  mainImageWrapper: {
-    marginBottom: "1rem",
-  },
-  mainImage: {
-    width: "100%",
-    maxHeight: "400px",
-    objectFit: "cover",
-    borderRadius: "10px",
-  },
-  thumbnailRow: {
-    display: "flex",
-    gap: "10px",
-    marginBottom: "1.5rem",
-    overflowX: "auto",
-  },
-  thumbnail: {
-    height: "60px",
-    cursor: "pointer",
-    borderRadius: "6px",
-    objectFit: "cover",
-  },
-  headerRow: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "1rem",
-  },
-  title: {
-    fontSize: "1.6rem",
-    color: "#007bff",
-    marginBottom: "0.5rem",
-  },
-  price: {
-    fontSize: "1.2rem",
-    color: "#28a745",
-    marginBottom: "1rem",
-  },
-  description: {
-    marginTop: "1rem",
-    fontSize: "1rem",
-    color: "#333",
-  },
-  date: {
-    marginTop: "1.2rem",
-    fontSize: "0.9rem",
-    color: "#666",
   },
   back: {
     background: "none",
@@ -301,6 +270,69 @@ const styles = {
     display: "flex",
     alignItems: "center",
     fontSize: "1rem",
+  },
+  mainImageWrapper: {
+    marginBottom: "1rem",
+  },
+  mainImage: {
+    width: "100%",
+    maxHeight: "420px",
+    objectFit: "cover",
+    borderRadius: "10px",
+  },
+  headerRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "0.5rem",
+  },
+  title: {
+    fontSize: "1.8rem",
+    color: "#222",
+    fontWeight: 600,
+  },
+  actionRow: {
+    display: "flex",
+    gap: "10px",
+    marginBottom: "1.5rem",
+  },
+  editBtn: {
+    background: "#ffc107",
+    color: "#000",
+    padding: "6px 14px",
+    borderRadius: "6px",
+    textDecoration: "none",
+    fontWeight: "bold",
+  },
+  deleteBtn: {
+    background: "#dc3545",
+    color: "#fff",
+    padding: "6px 14px",
+    border: "none",
+    borderRadius: "6px",
+    fontWeight: "bold",
+    cursor: "pointer",
+  },
+  detailBlock: {
+    marginBottom: "1rem",
+    fontSize: "1rem",
+    color: "#444",
+    lineHeight: 1.6,
+  },
+  price: {
+    color: "#28a745",
+    fontWeight: "bold",
+    fontSize: "1.2rem",
+  },
+  description: {
+    marginTop: "1rem",
+    fontSize: "1rem",
+    color: "#333",
+  },
+  date: {
+    marginTop: "1rem",
+    fontSize: "0.9rem",
+    color: "#777",
   },
   tagsSection: {
     marginTop: "1.5rem",
@@ -319,7 +351,7 @@ const styles = {
     fontSize: "0.85rem",
   },
   messageBox: {
-    marginTop: "2rem",
+    marginTop: "2.5rem",
     padding: "1rem",
     border: "1px solid #eee",
     borderRadius: "10px",

@@ -50,7 +50,7 @@ export default function Navbar() {
         {user.is_buyer && <Link to="/favorites" style={styles.link}>Favorites</Link>}
         <Link to="/messages" style={styles.link}>My Messages</Link>
         <Link to="/inbox" style={styles.link}>Chat Inbox</Link>
-        <Link to="/settings" style={styles.link}>Settings</Link> {/* ✅ Added settings link */}
+        <Link to="/settings" style={styles.link}>Settings</Link>
         {user.is_admin && <Link to="/admin" style={styles.link}>Admin Panel</Link>}
       </div>
 
@@ -131,3 +131,4 @@ const styles = {
     cursor: "pointer",
   },
 };
+

@@ -6,11 +6,12 @@ import Register from "./Register";
 import Dashboard from "./Dashboard";
 import PostAdPage from "./PostAdPage";
 import ListingsPage from "./ListingsPage";
-import ListingDetail from "./ListingDetail"; // Ensure this matches with ListingDetail.jsx
+import ListingDetail from "./ListingDetail";
 import Favorites from "./Favorites";
 import MyMessages from "./MyMessages";
 import Inbox from "./Inbox";
-import SettingsPage from "./SettingsPage"; // ✅ NEW
+import SettingsPage from "./SettingsPage";
+import EditListing from "./EditListing"; // ✅ New import
 import PrivateRoute from "./PrivateRoute";
 import Navbar from "./Navbar";
 
@@ -80,13 +81,18 @@ export default function App() {
           }
         />
 
-        {/* Public listing display route */}
+        <Route
+          path="/edit-listing/:id"
+          element={
+            <PrivateRoute>
+              <EditListing />
+            </PrivateRoute>
+          }
+        />
+
         <Route path="/listings" element={<ListingsPage />} />
-        
-        {/* Fix the listing detail route to match the navigate path */}
         <Route path="/listing-detail/:id" element={<ListingDetail />} />
 
-        {/* Catch-all fallback */}
         <Route path="*" element={<Login />} />
       </Routes>
     </Router>
