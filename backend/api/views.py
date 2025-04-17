@@ -1,5 +1,3 @@
-# api/views.py
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import viewsets, permissions, status
@@ -8,19 +6,20 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.decorators import action
 from django.db.models import Q
-import json
 
+import json
 from firebase_admin import auth as firebase_auth
 import api.firebase_admin_setup
 
 from django.contrib.auth import get_user_model
 from .models import (
-    CommunityPosting, Category, PostingImage, Favorite, Tag, ListingTag, Message
+    CommunityPosting, Category, PostingImage, Favorite,
+    Tag, ListingTag, Message, PaymentMethod, Offering, Order
 )
 from .serializers import (
     CommunityPostingSerializer, CategorySerializer, FavoriteSerializer,
     TagSerializer, ListingTagSerializer, MessageSerializer, MessageCreateSerializer,
-    UserProfileSerializer
+    UserProfileSerializer, PaymentMethodSerializer, OfferingSerializer, OrderSerializer
 )
 
 User = get_user_model()
@@ -54,30 +53,25 @@ class PostingDetailView(RetrieveAPIView):
     queryset = CommunityPosting.objects.all()
     serializer_class = CommunityPostingSerializer
     permission_classes = [AllowAny]
-    lookup_field = 'id'
+    lookup_field = "id"
 
 
-# 📦 Postings CRUD + "my ads" support
+# 📦 Postings CRUD + "my ads" + image delete + payment/offering M2M
 class CommunityPostingViewSet(viewsets.ModelViewSet):
     serializer_class = CommunityPostingSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     parser_classes = [MultiPartParser, FormParser]
 
     def get_queryset(self):
-        qs = CommunityPosting.objects.all().order_by('-created_at')
-        # if listing the root endpoint, allow '?mine=true' to filter
-        if self.action == 'list' and self.request.user.is_authenticated:
-            if self.request.query_params.get('mine') in ['true', '1', 'yes']:
+        qs = CommunityPosting.objects.all().order_by("-created_at")
+        if self.action == "list" and self.request.user.is_authenticated:
+            if self.request.query_params.get("mine") in ["true", "1", "yes"]:
                 qs = qs.filter(user=self.request.user)
         return qs
 
-    @action(detail=False, methods=['get'], url_path='my-ads', permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=["get"], url_path="my-ads", permission_classes=[IsAuthenticated])
     def my_ads(self, request):
-        """
-        GET /api/postings/my-ads/
-        Returns only the postings owned by the authenticated user.
-        """
-        qs = CommunityPosting.objects.filter(user=request.user).order_by('-created_at')
+        qs = CommunityPosting.objects.filter(user=request.user).order_by("-created_at")
         page = self.paginate_queryset(qs)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
@@ -92,17 +86,15 @@ class CommunityPostingViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         posting = serializer.save()
-        # handle new uploads
         for image in self.request.FILES.getlist("images"):
             PostingImage.objects.create(posting=posting, image=image)
-        # handle deletions
         deleted_ids = self.request.data.getlist("deleted_images")
         try:
             deleted_ids = [int(i) for i in deleted_ids if str(i).isdigit()]
             if deleted_ids:
                 PostingImage.objects.filter(posting=posting, id__in=deleted_ids).delete()
-        except Exception as e:
-            print("Error parsing deleted_images:", e)
+        except Exception:
+            pass
 
     def destroy(self, request, *args, **kwargs):
         posting = self.get_object()
@@ -119,6 +111,20 @@ class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [AllowAny]
+
+
+# 💳 Payment Methods CRUD
+class PaymentMethodViewSet(viewsets.ModelViewSet):
+    queryset = PaymentMethod.objects.all()
+    serializer_class = PaymentMethodSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+
+# 🏱 Offerings CRUD
+class OfferingViewSet(viewsets.ModelViewSet):
+    queryset = Offering.objects.all()
+    serializer_class = OfferingSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
 
 # ❤️ Favorites CRUD scoped to user
@@ -140,7 +146,7 @@ class TagViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
 
 
-# 🔗 Listing-Tag Relation
+# 🔗 ListingTag CRUD
 class ListingTagViewSet(viewsets.ModelViewSet):
     queryset = ListingTag.objects.all()
     serializer_class = ListingTagSerializer
@@ -153,18 +159,19 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return Message.objects.filter(Q(sender=user) | Q(recipient=user)).order_by('-created_at')
+        return Message.objects.filter(Q(sender=user) | Q(recipient=user)).order_by("-created_at")
 
     def get_serializer_class(self):
-        return MessageCreateSerializer if self.action == 'create' else MessageSerializer
+        return MessageCreateSerializer if self.action == "create" else MessageSerializer
 
     def perform_create(self, serializer):
         serializer.save(sender=self.request.user)
 
     @action(detail=False, methods=["get"], url_path="inbox")
     def inbox(self, request):
-        user = request.user
-        msgs = Message.objects.filter(Q(sender=user) | Q(recipient=user)).order_by('-created_at')
+        msgs = Message.objects.filter(
+            Q(sender=request.user) | Q(recipient=request.user)
+        ).order_by("-created_at")
         serializer = self.get_serializer(msgs, many=True)
         return Response(serializer.data)
 
@@ -172,43 +179,39 @@ class MessageViewSet(viewsets.ModelViewSet):
     def send_message(self, request):
         sender = request.user
         recipient_id = request.data.get("recipient_id")
-        content = request.data.get("content")
-        listing_id = request.data.get("listing_id")
+        content      = request.data.get("content")
+        listing_id   = request.data.get("listing_id")
 
         if not (recipient_id and content and listing_id):
             return Response(
-                {"error": "recipient_id, content & listing_id are required."},
+                {"error":"recipient_id, content & listing_id are required."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
-            listing = CommunityPosting.objects.get(id=listing_id)
+            listing   = CommunityPosting.objects.get(id=listing_id)
             recipient = User.objects.get(id=recipient_id)
         except (CommunityPosting.DoesNotExist, User.DoesNotExist):
-            return Response({"error": "Invalid listing or recipient."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error":"Invalid listing or recipient."}, status=status.HTTP_400_BAD_REQUEST)
 
         if listing.user == sender:
-            return Response({"error": "Cannot message your own listing."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"error":"Cannot message your own listing."}, status=status.HTTP_403_FORBIDDEN)
 
         msg = Message.objects.create(
-            sender=sender,
-            recipient=recipient,
-            content=content,
-            listing=listing
+            sender=sender, recipient=recipient,
+            content=content, listing=listing
         )
         return Response(MessageSerializer(msg).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"], url_path="reply")
     def reply(self, request, pk=None):
-        orig = self.get_object()
+        orig    = self.get_object()
         content = request.data.get("content")
         if not content:
-            return Response({"error": "Content required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error":"Content required."}, status=status.HTTP_400_BAD_REQUEST)
         reply = Message.objects.create(
-            listing=orig.listing,
-            sender=request.user,
-            recipient=orig.sender,
-            content=content
+            listing=orig.listing, sender=request.user,
+            recipient=orig.sender, content=content
         )
         return Response(MessageSerializer(reply).data, status=status.HTTP_201_CREATED)
 
@@ -216,24 +219,21 @@ class MessageViewSet(viewsets.ModelViewSet):
 # 👤 User Profile (Account Settings)
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
+    parser_classes   = [MultiPartParser, FormParser]
 
     def get(self, request):
-        user = request.user
-        # Ensure Firebase token -> Django user
         try:
-            id_token = request.META.get("HTTP_AUTHORIZATION", "").split(" ")[-1]
-            decoded = firebase_auth.verify_id_token(id_token)
-            email = decoded.get("email")
+            id_token = request.META.get("HTTP_AUTHORIZATION", "").split()[-1]
+            decoded  = firebase_auth.verify_id_token(id_token)
+            email    = decoded.get("email")
             user, _ = User.objects.get_or_create(
                 email=email,
                 defaults={"username": email.split("@")[0], "is_active": True}
             )
-        except Exception as e:
-            return Response({"error": "Invalid token."}, status=status.HTTP_401_UNAUTHORIZED)
+        except Exception:
+            return Response({"error":"Invalid token."}, status=status.HTTP_401_UNAUTHORIZED)
 
-        serializer = UserProfileSerializer(user)
-        return Response(serializer.data)
+        return Response(UserProfileSerializer(user).data)
 
     def put(self, request):
         serializer = UserProfileSerializer(request.user, data=request.data)
@@ -248,3 +248,15 @@ class UserProfileView(APIView):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# 📟 OrderViewSet – Checkout API
+class OrderViewSet(viewsets.ModelViewSet):
+    serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Order.objects.filter(buyer=self.request.user).order_by("-created_at")
+
+    def perform_create(self, serializer):
+        serializer.save(buyer=self.request.user)
