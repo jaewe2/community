@@ -1,4 +1,3 @@
-// src/App.jsx
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Login from "./Login";
@@ -7,12 +6,14 @@ import Dashboard from "./Dashboard";
 import PostAdPage from "./PostAdPage";
 import ListingsPage from "./ListingsPage";
 import ListingDetail from "./ListingDetail";
-import MyAdsPage from "./MyAdsPage";          // ← NEW
+import MyAdsPage from "./MyAdsPage";
 import Favorites from "./Favorites";
 import MyMessages from "./MyMessages";
 import Inbox from "./Inbox";
 import SettingsPage from "./SettingsPage";
 import EditListing from "./EditListing";
+import CheckoutPage from "./CheckoutPage";
+import OrderConfirmation from "./OrderConfirmation"; // ✅ NEW
 import PrivateRoute from "./PrivateRoute";
 import Navbar from "./Navbar";
 
@@ -39,7 +40,6 @@ export default function App() {
             </PrivateRoute>
           }
         />
-
         <Route
           path="/post"
           element={
@@ -48,8 +48,6 @@ export default function App() {
             </PrivateRoute>
           }
         />
-
-        {/* ← “My Ads” */}
         <Route
           path="/my-ads"
           element={
@@ -58,7 +56,6 @@ export default function App() {
             </PrivateRoute>
           }
         />
-
         <Route
           path="/favorites"
           element={
@@ -67,7 +64,6 @@ export default function App() {
             </PrivateRoute>
           }
         />
-
         <Route
           path="/messages"
           element={
@@ -76,7 +72,6 @@ export default function App() {
             </PrivateRoute>
           }
         />
-
         <Route
           path="/inbox"
           element={
@@ -85,7 +80,6 @@ export default function App() {
             </PrivateRoute>
           }
         />
-
         <Route
           path="/settings"
           element={
@@ -94,12 +88,27 @@ export default function App() {
             </PrivateRoute>
           }
         />
-
         <Route
           path="/edit-listing/:id"
           element={
             <PrivateRoute>
               <EditListing />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/checkout/:id"
+          element={
+            <PrivateRoute>
+              <CheckoutPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/order-confirmation/:id"
+          element={
+            <PrivateRoute>
+              <OrderConfirmation />
             </PrivateRoute>
           }
         />

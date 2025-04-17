@@ -1,15 +1,21 @@
+// src/PostAdPage.jsx
 import React, { useState, useEffect } from "react";
 import { auth } from "./firebase";
 import { toast } from "react-toastify";
 
 export default function PostAdPage() {
   const [categories, setCategories] = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [offerings, setOfferings] = useState([]);
+
   const [form, setForm] = useState({
     title: "",
     description: "",
     price: "",
     location: "",
     category: "",
+    payment_methods_ids: [],
+    offerings_ids: [],
   });
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -17,50 +23,58 @@ export default function PostAdPage() {
 
   useEffect(() => {
     fetch("http://127.0.0.1:8000/api/categories/")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch categories");
-        return res.json();
-      })
+      .then((res) => res.json())
       .then(setCategories)
       .catch(() => toast.error("Could not load categories"));
+
+    // ← corrected endpoint names:
+    fetch("http://127.0.0.1:8000/api/payment-methods/")
+      .then((res) => res.json())
+      .then(setPaymentMethods)
+      .catch(() => toast.error("Could not load payment options"));
+
+    fetch("http://127.0.0.1:8000/api/offerings/")
+      .then((res) => res.json())
+      .then(setOfferings)
+      .catch(() => toast.error("Could not load offerings"));
   }, []);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
+  const toggleCheckbox = (field, id) => {
+    setForm((f) => {
+      const s = new Set(f[field]);
+      s.has(id) ? s.delete(id) : s.add(id);
+      return { ...f, [field]: Array.from(s) };
+    });
+  };
+
+  const handleImageFiles = (files) => {
     const total = images.length + files.length;
     if (total > 5) {
       toast.error("You can only upload up to 5 images.");
       return;
     }
-    setImages([...images, ...files.slice(0, 5 - images.length)]);
+    setImages((prev) => [...prev, ...files.slice(0, 5 - prev.length)]);
+  };
+
+  const handleImageChange = (e) => {
+    handleImageFiles(Array.from(e.target.files));
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
-    e.stopPropagation();
     setIsDragging(false);
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    const total = images.length + droppedFiles.length;
-    if (total > 5) {
-      toast.error("You can only upload up to 5 images.");
-      return;
-    }
-    setImages([...images, ...droppedFiles.slice(0, 5 - images.length)]);
+    handleImageFiles(Array.from(e.dataTransfer.files));
   };
-
   const handleDragOver = (e) => {
     e.preventDefault();
-    e.stopPropagation();
-    if (!isDragging) setIsDragging(true);
+    setIsDragging(true);
   };
-
   const handleDragLeave = (e) => {
     e.preventDefault();
-    e.stopPropagation();
     setIsDragging(false);
   };
 
@@ -69,41 +83,51 @@ export default function PostAdPage() {
     const user = auth.currentUser;
     if (!user) return toast.error("You must be logged in");
 
+    setLoading(true);
     try {
-      setLoading(true);
       const token = await user.getIdToken();
-
       const formData = new FormData();
-      for (let key in form) {
-        formData.append(key, form[key]);
-      }
-      images.forEach((img) => formData.append("images", img));
 
-      const response = await fetch("http://127.0.0.1:8000/api/postings/", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
+      // basic fields
+      Object.entries(form).forEach(([k, v]) => {
+        if (Array.isArray(v)) return; // skip arrays
+        formData.append(k, v);
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        toast.error(`Failed: ${errorData.detail || "Unknown error"}`);
-      } else {
-        toast.success("Ad posted successfully!");
-        setForm({
-          title: "",
-          description: "",
-          price: "",
-          location: "",
-          category: "",
-        });
-        setImages([]);
+      // images
+      images.forEach((img) => formData.append("images", img));
+
+      // m2m ids
+      form.payment_methods_ids.forEach((id) =>
+        formData.append("payment_methods_ids", id)
+      );
+      form.offerings_ids.forEach((id) =>
+        formData.append("offerings_ids", id)
+      );
+
+      const res = await fetch("http://127.0.0.1:8000/api/postings/", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Unknown error");
       }
+      toast.success("Ad posted successfully!");
+      setForm({
+        title: "",
+        description: "",
+        price: "",
+        location: "",
+        category: "",
+        payment_methods_ids: [],
+        offerings_ids: [],
+      });
+      setImages([]);
     } catch (err) {
-      console.error("Error submitting post:", err);
-      toast.error("Network error: Failed to connect to server");
+      console.error(err);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -160,6 +184,34 @@ export default function PostAdPage() {
           ))}
         </select>
 
+        <fieldset style={styles.fieldset}>
+          <legend>Payment Methods</legend>
+          {paymentMethods.map((pm) => (
+            <label key={pm.id} style={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={form.payment_methods_ids.includes(pm.id)}
+                onChange={() => toggleCheckbox("payment_methods_ids", pm.id)}
+              />{" "}
+              {pm.name}
+            </label>
+          ))}
+        </fieldset>
+
+        <fieldset style={styles.fieldset}>
+          <legend>Offerings / Add‑ons</legend>
+          {offerings.map((of) => (
+            <label key={of.id} style={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={form.offerings_ids.includes(of.id)}
+                onChange={() => toggleCheckbox("offerings_ids", of.id)}
+              />{" "}
+              {of.name} (+${of.extra_cost})
+            </label>
+          ))}
+        </fieldset>
+
         <div
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -176,13 +228,13 @@ export default function PostAdPage() {
               : "Max 5 images uploaded"}
           </p>
           <input
+            id="fileInput"
             type="file"
             accept="image/*"
             multiple
             onChange={handleImageChange}
             disabled={images.length >= 5}
             style={{ display: "none" }}
-            id="fileInput"
           />
           <label htmlFor="fileInput" style={styles.uploadLabel}>
             Browse
@@ -191,9 +243,9 @@ export default function PostAdPage() {
 
         {images.length > 0 && (
           <div style={styles.previewRow}>
-            {images.map((img, idx) => (
+            {images.map((img, i) => (
               <img
-                key={idx}
+                key={i}
                 src={URL.createObjectURL(img)}
                 alt="preview"
                 style={styles.thumb}
@@ -203,7 +255,7 @@ export default function PostAdPage() {
         )}
 
         <button type="submit" style={styles.button} disabled={loading}>
-          {loading ? "Posting..." : "Submit Ad"}
+          {loading ? "Posting…" : "Submit Ad"}
         </button>
       </form>
     </div>
@@ -235,14 +287,16 @@ const styles = {
     borderRadius: "5px",
     border: "1px solid #ccc",
   },
-  button: {
-    background: "#007bff",
-    color: "#fff",
+  fieldset: {
+    border: "1px solid #ddd",
     padding: "10px",
-    fontWeight: "bold",
-    border: "none",
     borderRadius: "5px",
-    cursor: "pointer",
+    textAlign: "left",
+  },
+  checkboxLabel: {
+    display: "block",
+    fontSize: "0.9rem",
+    margin: "4px 0",
   },
   dropzone: {
     border: "2px dashed #ccc",
@@ -268,7 +322,6 @@ const styles = {
     gap: "10px",
     flexWrap: "wrap",
     justifyContent: "center",
-    marginTop: "0.5rem",
   },
   thumb: {
     width: "80px",
@@ -276,5 +329,14 @@ const styles = {
     objectFit: "cover",
     borderRadius: "6px",
     border: "1px solid #ddd",
+  },
+  button: {
+    background: "#007bff",
+    color: "#fff",
+    padding: "10px",
+    fontWeight: "bold",
+    border: "none",
+    borderRadius: "5px",
+    cursor: "pointer",
   },
 };
