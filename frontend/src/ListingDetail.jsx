@@ -137,6 +137,11 @@ export default function ListingDetail() {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
+
+    if (currentUserId === listing.user_id) {
+      return toast.error("You cannot message your own listing.");
+    }
+
     const token = await auth.currentUser?.getIdToken();
     if (!token) return toast.error("You must be logged in to send a message");
 
@@ -223,29 +228,35 @@ export default function ListingDetail() {
         </div>
       )}
 
-      <div style={styles.messageBox}>
-        <h4>Contact Seller</h4>
-        <form onSubmit={handleSendMessage} style={styles.messageForm}>
-          <input
-            type="email"
-            value={userEmail}
-            readOnly
-            style={styles.messageInput}
-            placeholder="Your Email"
-          />
-          <textarea
-            placeholder="Write your message..."
-            rows="4"
-            required
-            value={messageContent}
-            onChange={(e) => setMessageContent(e.target.value)}
-            style={styles.messageTextarea}
-          />
-          <button type="submit" style={styles.messageButton}>
-            Send Message
-          </button>
-        </form>
-      </div>
+      {currentUserId === listing.user_id ? (
+        <div style={styles.ownerBanner}>
+          <p>You are the owner of this listing. Messaging is disabled.</p>
+        </div>
+      ) : (
+        <div style={styles.messageBox}>
+          <h4>Contact Seller</h4>
+          <form onSubmit={handleSendMessage} style={styles.messageForm}>
+            <input
+              type="email"
+              value={userEmail}
+              readOnly
+              style={styles.messageInput}
+              placeholder="Your Email"
+            />
+            <textarea
+              placeholder="Write your message..."
+              rows="4"
+              required
+              value={messageContent}
+              onChange={(e) => setMessageContent(e.target.value)}
+              style={styles.messageTextarea}
+            />
+            <button type="submit" style={styles.messageButton}>
+              Send Message
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
@@ -349,6 +360,16 @@ const styles = {
     color: "#333",
     borderRadius: "20px",
     fontSize: "0.85rem",
+  },
+  ownerBanner: {
+    marginTop: "2rem",
+    padding: "1rem",
+    backgroundColor: "#f8f9fa",
+    border: "1px solid #ddd",
+    borderRadius: "8px",
+    color: "#555",
+    textAlign: "center",
+    fontStyle: "italic",
   },
   messageBox: {
     marginTop: "2.5rem",
