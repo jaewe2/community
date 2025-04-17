@@ -4,25 +4,14 @@ import { auth } from "./firebase";
 import { toast } from "react-toastify";
 
 export default function Inbox() {
-  const [conversations, setConversations] = useState([]);
-  const [selectedMessages, setSelectedMessages] = useState([]);
+  const [conversations, setConversations] = useState({});
   const [selectedListingId, setSelectedListingId] = useState(null);
   const [replyText, setReplyText] = useState("");
   const isTyping = useRef(false);
-  const [currentUID, setCurrentUID] = useState(null);
+  const currentEmail = auth.currentUser?.email;
 
   useEffect(() => {
-    const getUID = async () => {
-      const user = auth.currentUser;
-      if (user) {
-        const token = await user.getIdTokenResult();
-        setCurrentUID(token.claims.user_id || user.uid); // fallback to Firebase UID
-      }
-    };
-
-    getUID();
     fetchMessages();
-
     const interval = setInterval(() => {
       if (!isTyping.current) fetchMessages();
     }, 30000);
@@ -37,110 +26,155 @@ export default function Inbox() {
       });
       if (!res.ok) throw new Error("Failed to load messages");
       const data = await res.json();
-      const grouped = data.reduce((acc, msg) => {
-        acc[msg.listing] = acc[msg.listing] || [];
-        acc[msg.listing].push({
+
+      // Group by listing, and mark each whether it's our own
+      const grouped = {};
+      data.forEach((msg) => {
+        const lid = msg.listing;
+        if (!grouped[lid]) {
+          grouped[lid] = { title: msg.listing_title, messages: [] };
+        }
+        grouped[lid].messages.push({
           ...msg,
-          is_own: msg.sender_uid === currentUID || msg.sender === auth.currentUser.email,
+          isOwn: msg.sender === currentEmail,
         });
-        return acc;
-      }, {});
+      });
+
       setConversations(grouped);
-      if (selectedListingId && grouped[selectedListingId]) {
-        setSelectedMessages(grouped[selectedListingId]);
+      // If the selected thread no longer exists, clear selection
+      if (selectedListingId && !grouped[selectedListingId]) {
+        setSelectedListingId(null);
       }
     } catch (err) {
+      console.error(err);
       toast.error("Could not load inbox");
     }
   };
 
   const handleSelectThread = (listingId) => {
     setSelectedListingId(listingId);
-    setSelectedMessages(conversations[listingId]);
+    setReplyText("");
   };
 
-  const handleReply = async (parentMessageId) => {
+  const handleReply = async () => {
+    const msgs = conversations[selectedListingId].messages;
+    const last = msgs[msgs.length - 1];
     if (!replyText.trim()) return;
+
     try {
       const token = await auth.currentUser?.getIdToken();
-      const res = await fetch(`http://127.0.0.1:8000/api/messages/${parentMessageId}/reply/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ content: replyText }),
-      });
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/messages/${last.id}/reply/`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ content: replyText }),
+        }
+      );
       if (!res.ok) throw new Error("Reply failed");
       setReplyText("");
       isTyping.current = false;
-      await fetchMessages(); // refresh after sending
+      await fetchMessages();
     } catch (err) {
+      console.error(err);
       toast.error("Failed to send reply");
     }
   };
 
+  const threads = Object.entries(conversations);
+
   return (
     <div style={styles.wrapper}>
-      {/* Left Sidebar - Recent */}
+      {/* Sidebar */}
       <div style={styles.sidebar}>
-        <h3 style={styles.sidebarHeader}>Recent</h3>
-        {Object.entries(conversations).map(([listingId, msgs]) => {
-          const lastMsg = msgs[msgs.length - 1];
+        <h3 style={styles.sidebarHeader}>Select a conversation</h3>
+        {threads.map(([listingId, { title, messages }]) => {
+          const last = messages[messages.length - 1];
           return (
             <div
               key={listingId}
               onClick={() => handleSelectThread(listingId)}
               style={{
                 ...styles.threadPreview,
-                background: listingId === selectedListingId ? "#e0eaff" : "#f8f8f8",
+                background:
+                  listingId.toString() === selectedListingId
+                    ? "#e0eaff"
+                    : "#f8f8f8",
               }}
             >
-              <div style={styles.avatar}> {lastMsg.sender?.[0]?.toUpperCase() || "?"} </div>
-              <div style={styles.threadText}>
-                <p style={styles.sender}>{lastMsg.sender}</p>
-                <p style={styles.preview}>{lastMsg.content.slice(0, 40)}...</p>
+              <div style={styles.avatar}>
+                {(last.isOwn ? currentEmail : last.sender)[0].toUpperCase()}
               </div>
-              <p style={styles.date}>{new Date(lastMsg.created_at).toLocaleDateString()}</p>
+              <div style={styles.threadText}>
+                <p style={styles.listingTitle}>{title}</p>
+                <p style={styles.preview}>
+                  {last.isOwn ? "You: " : ""}
+                  {last.content.length > 40
+                    ? last.content.slice(0, 40) + "…"
+                    : last.content}
+                </p>
+              </div>
+              <p style={styles.date}>
+                {new Date(last.created_at).toLocaleDateString()}
+              </p>
             </div>
           );
         })}
       </div>
 
-      {/* Right Panel - Chat Thread */}
+      {/* Chat panel */}
       <div style={styles.chatPanel}>
-        <h3 style={styles.heading}>Messaging</h3>
+        <h3 style={styles.heading}>
+          {selectedListingId
+            ? conversations[selectedListingId].title
+            : "Conversations"}
+        </h3>
+
         <div style={styles.messagesArea}>
-          {selectedMessages.map((msg) => (
-            <div
-              key={msg.id}
-              style={{
-                ...styles.messageBubble,
-                alignSelf: msg.is_own ? "flex-end" : "flex-start",
-                background: msg.is_own ? "#2f6f8f" : "#eaeaea",
-                color: msg.is_own ? "#fff" : "#000",
-              }}
-            >
-              {msg.content}
-              <div style={styles.timestamp}>{new Date(msg.created_at).toLocaleString()}</div>
-            </div>
-          ))}
+          {selectedListingId &&
+            // sort ascending by date, oldest first
+            conversations[selectedListingId]
+              .messages.slice()
+              .sort(
+                (a, b) =>
+                  new Date(a.created_at) - new Date(b.created_at)
+              )
+              .map((msg) => (
+                <div
+                  key={msg.id}
+                  style={{
+                    ...styles.messageBubble,
+                    alignSelf: msg.isOwn ? "flex-end" : "flex-start",
+                    background: msg.isOwn ? "#2f6f8f" : "#eaeaea",
+                    color: msg.isOwn ? "#fff" : "#000",
+                  }}
+                >
+                  <div style={styles.bubbleHeader}>
+                    <strong>{msg.isOwn ? "You" : msg.sender}</strong>
+                  </div>
+                  <div>{msg.content}</div>
+                  <div style={styles.timestamp}>
+                    {new Date(msg.created_at).toLocaleTimeString()}
+                  </div>
+                </div>
+              ))}
         </div>
-        {selectedMessages.length > 0 && (
+
+        {selectedListingId && (
           <div style={styles.replyBar}>
             <textarea
               style={styles.textarea}
-              placeholder="Type a message..."
+              placeholder="Type a message…"
               value={replyText}
               onChange={(e) => {
                 isTyping.current = true;
                 setReplyText(e.target.value);
               }}
             />
-            <button
-              onClick={() => handleReply(selectedMessages[selectedMessages.length - 1].id)}
-              style={styles.sendBtn}
-            >
+            <button style={styles.sendBtn} onClick={handleReply}>
               Send
             </button>
           </div>
@@ -157,53 +191,54 @@ const styles = {
     fontFamily: "'Segoe UI', sans-serif",
   },
   sidebar: {
-    width: "300px",
+    width: "280px",
     borderRight: "1px solid #ddd",
     overflowY: "auto",
-    padding: "1rem",
     background: "#f2f2f2",
+    padding: "1rem",
   },
   sidebarHeader: {
-    fontSize: "1.3rem",
-    color: "#007bff",
     marginBottom: "1rem",
+    color: "#007bff",
+    fontSize: "1.2rem",
   },
   threadPreview: {
     display: "flex",
     alignItems: "center",
-    padding: "10px",
-    marginBottom: "10px",
-    borderRadius: "8px",
+    padding: "8px",
+    marginBottom: "8px",
+    borderRadius: "6px",
     cursor: "pointer",
   },
   avatar: {
-    width: "40px",
-    height: "40px",
+    width: "36px",
+    height: "36px",
     borderRadius: "50%",
-    backgroundColor: "#007bff",
+    background: "#007bff",
     color: "#fff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontWeight: "bold",
-    fontSize: "1rem",
-    marginRight: "10px",
+    marginRight: "8px",
   },
   threadText: {
     flex: 1,
   },
-  sender: {
-    fontWeight: "bold",
+  listingTitle: {
+    margin: 0,
     fontSize: "0.95rem",
+    fontWeight: "bold",
   },
   preview: {
+    margin: 0,
     fontSize: "0.85rem",
     color: "#555",
   },
   date: {
+    marginLeft: "8px",
     fontSize: "0.75rem",
     color: "#888",
-    whiteSpace: "nowrap",
   },
   chatPanel: {
     flex: 1,
@@ -212,49 +247,59 @@ const styles = {
     padding: "1rem",
   },
   heading: {
-    fontSize: "1.5rem",
-    marginBottom: "1rem",
+    fontSize: "1.4rem",
+    marginBottom: "0.5rem",
+    borderBottom: "1px solid #ddd",
+    paddingBottom: "6px",
   },
   messagesArea: {
     flex: 1,
     overflowY: "auto",
     display: "flex",
     flexDirection: "column",
-    gap: "10px",
+    gap: "12px",
     padding: "1rem",
     border: "1px solid #eee",
-    borderRadius: "10px",
+    borderRadius: "8px",
     background: "#fafafa",
   },
   messageBubble: {
-    padding: "10px 14px",
-    borderRadius: "16px",
-    maxWidth: "60%",
+    maxWidth: "65%",
+    padding: "8px 12px",
+    borderRadius: "14px",
     position: "relative",
+  },
+  bubbleHeader: {
+    fontSize: "0.75rem",
+    marginBottom: "4px",
+    opacity: 0.8,
   },
   timestamp: {
     fontSize: "0.7rem",
     marginTop: "6px",
-    color: "#ccc",
+    textAlign: "right",
+    opacity: 0.7,
   },
   replyBar: {
     display: "flex",
-    marginTop: "1rem",
-    gap: "10px",
+    gap: "8px",
+    marginTop: "12px",
   },
   textarea: {
     flex: 1,
-    padding: "10px",
-    borderRadius: "8px",
+    padding: "8px",
+    borderRadius: "6px",
     border: "1px solid #ccc",
     resize: "none",
   },
   sendBtn: {
     background: "#007bff",
     color: "#fff",
+    padding: "8px 14px",
     border: "none",
-    padding: "10px 16px",
     borderRadius: "6px",
     cursor: "pointer",
   },
 };
+
+

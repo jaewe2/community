@@ -7,11 +7,12 @@ import Dashboard from "./Dashboard";
 import PostAdPage from "./PostAdPage";
 import ListingsPage from "./ListingsPage";
 import ListingDetail from "./ListingDetail";
+import MyAdsPage from "./MyAdsPage";          // ← NEW
 import Favorites from "./Favorites";
 import MyMessages from "./MyMessages";
 import Inbox from "./Inbox";
 import SettingsPage from "./SettingsPage";
-import EditListing from "./EditListing"; // ✅ New import
+import EditListing from "./EditListing";
 import PrivateRoute from "./PrivateRoute";
 import Navbar from "./Navbar";
 
@@ -23,10 +24,13 @@ export default function App() {
     <Router>
       <Navbar />
       <ToastContainer position="top-right" autoClose={3000} />
+
       <Routes>
+        {/* Public routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
+        {/* Protected routes */}
         <Route
           path="/dashboard"
           element={
@@ -41,6 +45,16 @@ export default function App() {
           element={
             <PrivateRoute>
               <PostAdPage />
+            </PrivateRoute>
+          }
+        />
+
+        {/* ← “My Ads” */}
+        <Route
+          path="/my-ads"
+          element={
+            <PrivateRoute>
+              <MyAdsPage />
             </PrivateRoute>
           }
         />
@@ -90,9 +104,11 @@ export default function App() {
           }
         />
 
+        {/* Public listing views */}
         <Route path="/listings" element={<ListingsPage />} />
         <Route path="/listing-detail/:id" element={<ListingDetail />} />
 
+        {/* Fallback */}
         <Route path="*" element={<Login />} />
       </Routes>
     </Router>
