@@ -1,7 +1,7 @@
-# models.py
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
+from django.utils.crypto import get_random_string
 
 # 🔐 Custom User Model
 class CommunityUser(AbstractUser):
@@ -14,6 +14,12 @@ class CommunityUser(AbstractUser):
     company_name = models.CharField(max_length=255, blank=True, null=True)
     display_as_company = models.BooleanField(default=False)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
+
+    # ✅ Auto-generate username if not set (especially for Firebase users)
+    def save(self, *args, **kwargs):
+        if not self.username:
+            self.username = f"user_{get_random_string(8)}"
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.email or self.username
