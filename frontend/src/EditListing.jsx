@@ -22,24 +22,22 @@ export default function EditListing() {
     offerings_ids: [],
   });
 
-  // images: { id, file, preview, isExisting }
   const [images, setImages] = useState([]);
-  const [deletedImages, setDeletedImages] = useState([]); 
+  const [deletedImages, setDeletedImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
-  // load listing + categories + paymentMethods + offerings
   useEffect(() => {
     const load = async () => {
       try {
         const token = await auth.currentUser.getIdToken();
-        const [ lstRes, catRes, pmRes, ofRes ] = await Promise.all([
+        const [lstRes, catRes, pmRes, ofRes] = await Promise.all([
           fetch(`http://127.0.0.1:8000/api/postings/${id}/`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
           fetch("http://127.0.0.1:8000/api/categories/"),
-          fetch("http://127.0.0.1:8000/api/paymentmethod/"),
-          fetch("http://127.0.0.1:8000/api/offering/"),
+          fetch("http://127.0.0.1:8000/api/payment-methods/"), // ✅ FIXED
+          fetch("http://127.0.0.1:8000/api/offerings/"),       // ✅ FIXED
         ]);
 
         if (!lstRes.ok) throw new Error("Failed to fetch listing");
@@ -85,14 +83,13 @@ export default function EditListing() {
       return { ...f, [field]: Array.from(s) };
     });
 
-  // new image files
   const handleImageFiles = (files) => {
     const total = images.length + files.length;
     if (total > 5) {
       toast.error("You can only upload up to 5 images.");
       return;
     }
-    const newbies = files.map((file,i) => ({
+    const newbies = files.map((file, i) => ({
       id: `new-${Date.now()}-${i}`,
       file,
       preview: URL.createObjectURL(file),
@@ -162,30 +159,22 @@ export default function EditListing() {
       const token = await user.getIdToken();
       const fd = new FormData();
 
-      // basic fields
-      ["title","description","price","location","category"].forEach((k) =>
+      ["title", "description", "price", "location", "category"].forEach((k) =>
         fd.append(k, form[k])
       );
 
-      // new images
       images.forEach((img) => {
         if (!img.isExisting && img.file) {
           fd.append("images", img.file);
         }
       });
 
-      // deletions
-      deletedImages.forEach((id) =>
-        fd.append("deleted_images", id)
-      );
+      deletedImages.forEach((id) => fd.append("deleted_images", id));
 
-      // payment & offering M2M
       form.payment_methods_ids.forEach((pm) =>
         fd.append("payment_methods_ids", pm)
       );
-      form.offerings_ids.forEach((of) =>
-        fd.append("offerings_ids", of)
-      );
+      form.offerings_ids.forEach((of) => fd.append("offerings_ids", of));
 
       const res = await fetch(`http://127.0.0.1:8000/api/postings/${id}/`, {
         method: "PATCH",
@@ -254,7 +243,9 @@ export default function EditListing() {
         >
           <option value="">Select Category</option>
           {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
           ))}
         </select>
 

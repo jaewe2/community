@@ -1,31 +1,29 @@
-// CheckoutPage.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { auth } from "./firebase";
 import { toast } from "react-toastify";
+import { auth } from "./firebase";
+import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
 
 export default function CheckoutPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const stripe = useStripe();
+  const elements = useElements();
 
   const [listing, setListing] = useState(null);
   const [selectedPayment, setSelectedPayment] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Personal Info
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-
-  // Address Info
   const [street, setStreet] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [zip, setZip] = useState("");
   const [country, setCountry] = useState("");
 
-  // Local fallback icons
   const localIcons = {
     "Apple Pay": "/ApplePay.jpg",
     "PayPal": "/Paypal.png",
@@ -47,64 +45,109 @@ export default function CheckoutPage() {
       });
   }, [id, navigate]);
 
+  const handleUnifiedCheckout = async () => {
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch("http://127.0.0.1:8000/api/create-stripe-session/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ listing_id: id }),
+    });
+
+    const data = await res.json();
+    if (!stripe) return toast.error("Stripe is not loaded");
+    const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+    if (result.error) toast.error(result.error.message);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!selectedPayment) return toast.error("Select a payment method");
 
     if (!firstName || !lastName || !email || !phone || !street || !city || !state || !zip || !country) {
       return toast.error("Please complete all required fields");
     }
 
+    const selected = listing.payment_methods.find((pm) => pm.id === Number(selectedPayment));
+    const name = selected?.name?.toLowerCase();
+
+    const token = await auth.currentUser.getIdToken();
     setLoading(true);
+
     try {
-      const token = await auth.currentUser.getIdToken();
-      const res = await fetch(`http://127.0.0.1:8000/api/orders/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          listing: Number(id),
-          payment_method: Number(selectedPayment),
-          offerings: [],
-          address_details: {
-            first_name: firstName,
-            last_name: lastName,
-            email,
-            phone,
-            street,
-            city,
-            state,
-            zip,
-            country,
+      if (name.includes("credit") && stripe && elements) {
+        const intentRes = await fetch("http://127.0.0.1:8000/api/create-payment-intent/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
-        }),
-      });
+          body: JSON.stringify({ amount: listing.price }),
+        });
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        toast.error(
-          errorData?.detail ||
-            Object.entries(errorData)
-              .map(([field, msg]) => `${field}: ${msg}`)
-              .join(", ") ||
-            "Payment failed"
-        );
-        return;
+        const { client_secret } = await intentRes.json();
+
+        const result = await stripe.confirmCardPayment(client_secret, {
+          payment_method: {
+            card: elements.getElement(CardElement),
+            billing_details: {
+              name: `${firstName} ${lastName}`,
+              email,
+              address: { line1: street, city, state, postal_code: zip, country },
+            },
+          },
+        });
+
+        if (result.error) throw new Error(result.error.message);
+        if (result.paymentIntent.status !== "succeeded") throw new Error("Payment not successful");
+
+        const paymentIntentId = result.paymentIntent.id;
+
+        const res = await fetch(`http://127.0.0.1:8000/api/orders/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            listing: Number(id),
+            payment_method: Number(selectedPayment),
+            stripe_payment_intent_id: paymentIntentId,
+            offerings: [],
+            address_details: {
+              first_name: firstName,
+              last_name: lastName,
+              email,
+              phone,
+              street,
+              city,
+              state,
+              zip,
+              country,
+            },
+          }),
+        });
+
+        if (!res.ok) throw new Error("Order creation failed");
+        const order = await res.json();
+        toast.success("Order placed successfully! 🎉");
+        navigate(`/order-confirmation/${order.id}`);
+      } else {
+        await handleUnifiedCheckout();
       }
-
-      const data = await res.json();
-      toast.success("Order placed successfully! 🎉");
-      navigate(`/order-confirmation/${data.id}`);
     } catch (err) {
-      toast.error(err.message || "Payment error");
+      toast.error(err.message || "Payment failed");
     } finally {
       setLoading(false);
     }
   };
 
   if (!listing) return <p style={{ padding: "2rem" }}>Loading…</p>;
+
+  const selectedMethod = listing.payment_methods.find((pm) => pm.id === Number(selectedPayment));
 
   return (
     <div style={styles.container}>
@@ -113,27 +156,20 @@ export default function CheckoutPage() {
       <p style={styles.price}>Total: ${listing.price}</p>
 
       <form onSubmit={handleSubmit} style={styles.form}>
-        {/* Payment */}
         <fieldset style={styles.fieldset}>
           <legend>Select Payment Method</legend>
           {listing.payment_methods.map((pm) => {
             const cleanName = pm.name?.trim().toLowerCase();
             const matchedIcon =
-              Object.entries(localIcons).find(
-                ([key]) => key.trim().toLowerCase() === cleanName
-              )?.[1] || pm.icon;
+              Object.entries(localIcons).find(([key]) => key.trim().toLowerCase() === cleanName)?.[1] || pm.icon;
 
             return (
               <label
                 key={pm.id}
                 style={{
                   ...styles.label,
-                  border: selectedPayment === String(pm.id)
-                    ? "2px solid #007bff"
-                    : "1px solid #ddd",
-                  backgroundColor: selectedPayment === String(pm.id)
-                    ? "#f0f8ff"
-                    : "#fff",
+                  border: selectedPayment === String(pm.id) ? "2px solid #007bff" : "1px solid #ddd",
+                  backgroundColor: selectedPayment === String(pm.id) ? "#f0f8ff" : "#fff",
                 }}
               >
                 <input
@@ -143,16 +179,20 @@ export default function CheckoutPage() {
                   checked={selectedPayment === String(pm.id)}
                   onChange={(e) => setSelectedPayment(e.target.value)}
                 />
-                {matchedIcon && (
-                  <img src={matchedIcon} alt={pm.name} style={styles.icon} />
-                )}
+                {matchedIcon && <img src={matchedIcon} alt={pm.name} style={styles.icon} />}
                 <span style={styles.labelText}>{pm.name}</span>
               </label>
             );
           })}
         </fieldset>
 
-        {/* Personal Info */}
+        {selectedMethod?.name.toLowerCase().includes("credit") && (
+          <div style={{ marginTop: "1rem", padding: "1rem", border: "1px solid #ccc", borderRadius: "6px" }}>
+            <label>Card Details</label>
+            <CardElement options={{ style: { base: { fontSize: "16px" } } }} />
+          </div>
+        )}
+
         <fieldset style={styles.fieldset}>
           <legend>Personal Info</legend>
           <input style={styles.input} placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
@@ -161,13 +201,12 @@ export default function CheckoutPage() {
           <input style={styles.input} placeholder="Phone Number" value={phone} onChange={(e) => setPhone(e.target.value)} />
         </fieldset>
 
-        {/* Address Info */}
         <fieldset style={styles.fieldset}>
           <legend>Mailing Address</legend>
-          <input style={styles.input} placeholder="Street Address" value={street} onChange={(e) => setStreet(e.target.value)} />
+          <input style={styles.input} placeholder="Street" value={street} onChange={(e) => setStreet(e.target.value)} />
           <input style={styles.input} placeholder="City" value={city} onChange={(e) => setCity(e.target.value)} />
           <input style={styles.input} placeholder="State" value={state} onChange={(e) => setState(e.target.value)} />
-          <input style={styles.input} placeholder="ZIP Code" value={zip} onChange={(e) => setZip(e.target.value)} />
+          <input style={styles.input} placeholder="ZIP" value={zip} onChange={(e) => setZip(e.target.value)} />
           <input style={styles.input} placeholder="Country" value={country} onChange={(e) => setCountry(e.target.value)} />
         </fieldset>
 
