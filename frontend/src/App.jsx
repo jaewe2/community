@@ -3,23 +3,26 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 
-import Login from "./Login";
-import Register from "./Register";
-import Dashboard from "./Dashboard";
-import PostAdPage from "./PostAdPage";
-import ListingsPage from "./ListingsPage";
-import ListingDetail from "./ListingDetail";
-import MyAdsPage from "./MyAdsPage";
-import Favorites from "./Favorites";
+// 🔧 Pages & Components
+import Login from "./Auth/Login"; // ✅ FIXED
+import Register from "./Auth/Register"; // ✅ FIXED
+import Dashboard from "./pages/Dashboard";
+import PostAdPage from "./pages/PostAdPage";
+import MyAdsPage from "./pages/MyAdsPage";
 import MyMessages from "./MyMessages";
-import Inbox from "./Inbox";
-import SettingsPage from "./SettingsPage";
-import EditListing from "./EditListing";
-import CheckoutPage from "./CheckoutPage";
+import Inbox from "./pages/Inbox";
+import SettingsPage from "./pages/SettingsPage";
+import CheckoutPage from "./pages/CheckoutPage";
 import OrderConfirmation from "./OrderConfirmation";
-import StripeSuccessPage from "./StripeSuccessPage"; // ✅ Add this
+import StripeSuccessPage from "./StripeSuccessPage";
 import PrivateRoute from "./PrivateRoute";
 import Navbar from "./Navbar";
+
+// 🗂 Listings
+import ListingsPage from "./Listings/ListingsPage";
+import ListingDetail from "./Listings/ListingDetail";
+import EditListing from "./Listings/EditListing";
+import Favorites from "./Listings/Favorites";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -40,7 +43,7 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/listings" element={<ListingsPage />} />
           <Route path="/listing-detail/:id" element={<ListingDetail />} />
-          <Route path="/order-confirmation/success" element={<StripeSuccessPage />} /> {/* ✅ Stripe redirect */}
+          <Route path="/order-confirmation/success" element={<StripeSuccessPage />} />
 
           {/* Protected routes */}
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
