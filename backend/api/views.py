@@ -6,12 +6,14 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.decorators import action
 from django.db.models import Q
+from django.conf import settings
+from django.core.mail import send_mail
+import stripe
 
-import json
 from firebase_admin import auth as firebase_auth
 import api.firebase_admin_setup
-
 from django.contrib.auth import get_user_model
+
 from .models import (
     CommunityPosting, Category, PostingImage, Favorite,
     Tag, ListingTag, Message, PaymentMethod, Offering, Order
@@ -23,14 +25,12 @@ from .serializers import (
 )
 
 User = get_user_model()
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
-# 🔓 Public HelloWorld
 class HelloWorldView(APIView):
     def get(self, request):
         return Response({"message": "Hello from Django!"})
 
-
-# 🔐 Firebase Token Verification
 class VerifyFirebaseToken(APIView):
     permission_classes = [AllowAny]
 
@@ -40,23 +40,16 @@ class VerifyFirebaseToken(APIView):
             return Response({"error": "Token missing"}, status=400)
         try:
             decoded = firebase_auth.verify_id_token(id_token)
-            return Response({
-                "uid": decoded["uid"],
-                "email": decoded.get("email"),
-            })
+            return Response({"uid": decoded["uid"], "email": decoded.get("email")})
         except Exception as e:
             return Response({"error": str(e)}, status=401)
 
-
-# 📄 Individual Listing Detail
 class PostingDetailView(RetrieveAPIView):
     queryset = CommunityPosting.objects.all()
     serializer_class = CommunityPostingSerializer
     permission_classes = [AllowAny]
     lookup_field = "id"
 
-
-# 📦 Postings CRUD + "my ads" + image delete + payment/offering M2M
 class CommunityPostingViewSet(viewsets.ModelViewSet):
     serializer_class = CommunityPostingSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
@@ -99,35 +92,24 @@ class CommunityPostingViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         posting = self.get_object()
         if posting.user != request.user:
-            return Response(
-                {"error": "You can only delete your own listings."},
-                status=status.HTTP_403_FORBIDDEN
-            )
+            return Response({"error": "You can only delete your own listings."}, status=status.HTTP_403_FORBIDDEN)
         return super().destroy(request, *args, **kwargs)
 
-
-# 📚 Categories CRUD
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [AllowAny]
 
-
-# 💳 Payment Methods CRUD
 class PaymentMethodViewSet(viewsets.ModelViewSet):
     queryset = PaymentMethod.objects.all()
     serializer_class = PaymentMethodSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
-
-# 🏱 Offerings CRUD
 class OfferingViewSet(viewsets.ModelViewSet):
     queryset = Offering.objects.all()
     serializer_class = OfferingSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
-
-# ❤️ Favorites CRUD scoped to user
 class FavoriteViewSet(viewsets.ModelViewSet):
     serializer_class = FavoriteSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -138,22 +120,16 @@ class FavoriteViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-
-# 🔖 Tags CRUD
 class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = [AllowAny]
 
-
-# 🔗 ListingTag CRUD
 class ListingTagViewSet(viewsets.ModelViewSet):
     queryset = ListingTag.objects.all()
     serializer_class = ListingTagSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
-
-# 💬 Messages CRUD
 class MessageViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -169,9 +145,7 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="inbox")
     def inbox(self, request):
-        msgs = Message.objects.filter(
-            Q(sender=request.user) | Q(recipient=request.user)
-        ).order_by("-created_at")
+        msgs = Message.objects.filter(Q(sender=request.user) | Q(recipient=request.user)).order_by("-created_at")
         serializer = self.get_serializer(msgs, many=True)
         return Response(serializer.data)
 
@@ -179,59 +153,45 @@ class MessageViewSet(viewsets.ModelViewSet):
     def send_message(self, request):
         sender = request.user
         recipient_id = request.data.get("recipient_id")
-        content      = request.data.get("content")
-        listing_id   = request.data.get("listing_id")
+        content = request.data.get("content")
+        listing_id = request.data.get("listing_id")
 
         if not (recipient_id and content and listing_id):
-            return Response(
-                {"error":"recipient_id, content & listing_id are required."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": "recipient_id, content & listing_id are required."}, status=400)
 
         try:
-            listing   = CommunityPosting.objects.get(id=listing_id)
+            listing = CommunityPosting.objects.get(id=listing_id)
             recipient = User.objects.get(id=recipient_id)
         except (CommunityPosting.DoesNotExist, User.DoesNotExist):
-            return Response({"error":"Invalid listing or recipient."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Invalid listing or recipient."}, status=400)
 
         if listing.user == sender:
-            return Response({"error":"Cannot message your own listing."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"error": "Cannot message your own listing."}, status=403)
 
-        msg = Message.objects.create(
-            sender=sender, recipient=recipient,
-            content=content, listing=listing
-        )
-        return Response(MessageSerializer(msg).data, status=status.HTTP_201_CREATED)
+        msg = Message.objects.create(sender=sender, recipient=recipient, content=content, listing=listing)
+        return Response(MessageSerializer(msg).data, status=201)
 
     @action(detail=True, methods=["post"], url_path="reply")
     def reply(self, request, pk=None):
-        orig    = self.get_object()
+        orig = self.get_object()
         content = request.data.get("content")
         if not content:
-            return Response({"error":"Content required."}, status=status.HTTP_400_BAD_REQUEST)
-        reply = Message.objects.create(
-            listing=orig.listing, sender=request.user,
-            recipient=orig.sender, content=content
-        )
-        return Response(MessageSerializer(reply).data, status=status.HTTP_201_CREATED)
+            return Response({"error": "Content required."}, status=400)
+        reply = Message.objects.create(listing=orig.listing, sender=request.user, recipient=orig.sender, content=content)
+        return Response(MessageSerializer(reply).data, status=201)
 
-
-# 👤 User Profile (Account Settings)
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
-    parser_classes   = [MultiPartParser, FormParser]
+    parser_classes = [MultiPartParser, FormParser]
 
     def get(self, request):
         try:
             id_token = request.META.get("HTTP_AUTHORIZATION", "").split()[-1]
-            decoded  = firebase_auth.verify_id_token(id_token)
-            email    = decoded.get("email")
-            user, _ = User.objects.get_or_create(
-                email=email,
-                defaults={"username": email.split("@")[0], "is_active": True}
-            )
+            decoded = firebase_auth.verify_id_token(id_token)
+            email = decoded.get("email")
+            user, _ = User.objects.get_or_create(email=email, defaults={"username": email.split("@")[0], "is_active": True})
         except Exception:
-            return Response({"error":"Invalid token."}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"error": "Invalid token."}, status=401)
 
         return Response(UserProfileSerializer(user).data)
 
@@ -240,17 +200,15 @@ class UserProfileView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=400)
 
     def patch(self, request):
         serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=400)
 
-
-# 📟 OrderViewSet – Checkout API
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -259,4 +217,85 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Order.objects.filter(buyer=self.request.user).order_by("-created_at")
 
     def perform_create(self, serializer):
-        serializer.save(buyer=self.request.user)
+        order = serializer.save(buyer=self.request.user)
+        if order.buyer.email:
+            try:
+                addr = order.address_details or {}
+                message = (
+                    f"Hi {addr.get('first_name', '')} {addr.get('last_name', '')},\n\n"
+                    f"Thanks for your purchase on Toro Marketplace!\n\n"
+                    f"\U0001f4e6 Listing: {order.listing.title}\n"
+                    f"\U0001f4b3 Payment: {order.payment_method.name}\n"
+                    f"\U0001f4b0 Total: ${order.total_price}\n"
+                    f"\U0001f4cd Status: {order.status}\n"
+                    f"\U0001f553 Placed: {order.created_at.strftime('%Y-%m-%d %H:%M')}\n\n"
+                    f"\U0001f4ec Shipping Address:\n"
+                    f"{addr.get('street', '')}\n"
+                    f"{addr.get('city', '')}, {addr.get('state', '')} {addr.get('zip', '')}\n"
+                    f"{addr.get('country', '')}\n"
+                    f"Email: {addr.get('email', '')}\n"
+                    f"Phone: {addr.get('phone', '')}\n\n"
+                    f"You can view your receipt or manage your order in your dashboard.\n\n"
+                    f"Toro Marketplace \U0001f402"
+                )
+
+                send_mail(
+                    subject=f"\u2705 Order Confirmation – Order #{order.id}",
+                    message=message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[order.buyer.email],
+                    fail_silently=True,
+                )
+            except Exception as e:
+                print(f"[!] Email sending failed: {e}")
+
+class CreatePaymentIntent(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            amount = float(request.data.get("amount", 0))
+            if amount <= 0:
+                return Response({"error": "Invalid amount"}, status=400)
+
+            intent = stripe.PaymentIntent.create(
+                amount=int(amount * 100),
+                currency="usd",
+                automatic_payment_methods={"enabled": True},
+            )
+            return Response({"client_secret": intent.client_secret})
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+class CreateStripeSession(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            listing_id = request.data.get("listing_id")
+            listing = CommunityPosting.objects.get(id=listing_id)
+
+            session = stripe.checkout.Session.create(
+                mode="payment",
+                payment_method_types=["card"],
+                line_items=[{
+                    "price_data": {
+                        "currency": "usd",
+                        "unit_amount": int(listing.price * 100),
+                        "product_data": {
+                            "name": listing.title,
+                            "description": listing.description,
+                        },
+                    },
+                    "quantity": 1,
+                }],
+                billing_address_collection="required",
+                success_url="http://localhost:3000/order-confirmation/success?session_id={CHECKOUT_SESSION_ID}",
+                cancel_url="http://localhost:3000/checkout/cancel",
+            )
+
+            return Response({"sessionId": session.id})
+        except CommunityPosting.DoesNotExist:
+            return Response({"error": "Listing not found"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)

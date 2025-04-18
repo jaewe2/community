@@ -14,7 +14,9 @@ from .views import (
     UserProfileView,
     PaymentMethodViewSet,
     OfferingViewSet,
-    OrderViewSet  # ✅ NEW
+    OrderViewSet,
+    CreatePaymentIntent,
+    CreateStripeSession,  # ✅ Added this for unified checkout
 )
 
 router = DefaultRouter()
@@ -26,7 +28,7 @@ router.register(r'listing-tags', ListingTagViewSet, basename='listing-tags')
 router.register(r'messages', MessageViewSet, basename='messages')
 router.register(r'payment-methods', PaymentMethodViewSet, basename='payment-methods')
 router.register(r'offerings', OfferingViewSet, basename='offerings')
-router.register(r'orders', OrderViewSet, basename='orders')  # ✅ NEW
+router.register(r'orders', OrderViewSet, basename='orders')
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -34,6 +36,10 @@ urlpatterns = [
     path('verify-token/', VerifyFirebaseToken.as_view(), name='verify-token'),
     path('postings/<int:id>/', PostingDetailView.as_view(), name='posting-detail'),
     path('user/profile/', UserProfileView.as_view(), name='user-profile'),
+
+    # ✅ Stripe API endpoints
+    path('create-payment-intent/', CreatePaymentIntent.as_view(), name='create-payment-intent'),
+    path('create-stripe-session/', CreateStripeSession.as_view(), name='create-stripe-session'),
 ]
 
 # WebSocket routes

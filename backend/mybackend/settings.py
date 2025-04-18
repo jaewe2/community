@@ -19,17 +19,16 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
-    'api',  # Your app
-    'channels',  # Channels app for WebSockets
+    'api',
+    'channels',
 ]
 
-# ✅ Use custom user model
 AUTH_USER_MODEL = 'api.CommunityUser'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # 🔁 Allow cross-origin requests
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -55,11 +54,8 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'mybackend.wsgi.application'
-
-# ASGI Configuration for Channels
 ASGI_APPLICATION = 'mybackend.asgi.application'
 
-# Database
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -67,7 +63,6 @@ DATABASES = {
     }
 }
 
-# Password validators
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -75,29 +70,23 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Static files
 STATIC_URL = 'static/'
 
-# Media files (uploads)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS
 CORS_ALLOW_ALL_ORIGINS = True
 
-# DRF and Firebase authentication
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'api.authentication.FirebaseAuthentication',  # Custom Firebase Auth class
+        'api.authentication.FirebaseAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
@@ -105,7 +94,6 @@ REST_FRAMEWORK = {
     ]
 }
 
-# Channel Layers Setup (Required for WebSocket)
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
@@ -114,3 +102,17 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+# 💳 Stripe Payment Keys
+STRIPE_PUBLIC_KEY = "pk_test_51RF0z8QwZ6p2QUvMv8etQl1SVBO3SKHD52A2rEtrBxTkt3UUDEigL7pUEoUoSHzqLl3gYREyeUFoctxmTXIsfmEE005qYckJZJ"
+STRIPE_SECRET_KEY = "sk_test_51RF0z8QwZ6p2QUvMhNYSOZL0k5sHkVXXw0ViZmnKDcaPDzgLeqWhGMlQjpwiT41NTHXqu4pU3ROH07dVWoToR5cO00sEx5fKyk"
+
+# 📧 Email Settings
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
+EMAIL_HOST_USER = "jaewe9@gmail.com"
+EMAIL_HOST_PASSWORD = "plih phvw qykb froq"   # 🔐 Use Gmail App Password (not your normal password)
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

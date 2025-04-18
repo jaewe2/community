@@ -173,6 +173,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 # 🧾 Order Serializer (📦 with listing/payment display + shipping)
 class OrderSerializer(serializers.ModelSerializer):
     buyer = serializers.ReadOnlyField(source="buyer.id")
+    buyer_email = serializers.ReadOnlyField(source="buyer.email")
     listing = serializers.PrimaryKeyRelatedField(queryset=CommunityPosting.objects.all())
     listing_title = serializers.CharField(source="listing.title", read_only=True)
 
@@ -186,16 +187,20 @@ class OrderSerializer(serializers.ModelSerializer):
     total_price = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     address_details = serializers.JSONField(required=False)
 
+    stripe_payment_intent_id = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
     class Meta:
         model = Order
         fields = [
             "id",
             "buyer",
+            "buyer_email",
             "listing",
             "listing_title",
             "payment_method",
             "payment_method_name",
             "payment_method_icon",
+            "stripe_payment_intent_id",
             "offerings",
             "total_price",
             "status",
