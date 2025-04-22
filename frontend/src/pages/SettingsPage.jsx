@@ -2,56 +2,56 @@ import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { auth, signInWithEmailAndPassword } from "../firebase";
 import { updatePassword, updateEmail } from "firebase/auth";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export default function AccountSettings() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("profile");
+
+  // Profile state
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [displayAsCompany, setDisplayAsCompany] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
+
+  // Security state
   const [email, setEmail] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [profileImage, setProfileImage] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
 
+  // Avatar state
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [profileImage, setProfileImage] = useState(null);
+
+  // Load user & profile once
   useEffect(() => {
     const user = auth.currentUser;
     if (user) {
       setEmail(user.email);
       setNewEmail(user.email);
-    }
 
-    const fetchProfile = async () => {
-      try {
-        const token = await user.getIdToken();
-        const res = await fetch("http://127.0.0.1:8000/api/user/profile/", {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!res.ok) throw new Error("Failed to load profile");
-        const data = await res.json();
-
-        setFirstName(data.first_name || "");
-        setLastName(data.last_name || "");
-        setCompanyName(data.company_name || "");
-        setDisplayAsCompany(data.display_as_company || false);
-        setPhoneNumber(data.phone_number || "");
-        if (data.profile_picture) {
-          setPreviewUrl(data.profile_picture);
+      (async () => {
+        try {
+          const token = await user.getIdToken();
+          const res = await fetch("/api/user/profile/", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (!res.ok) throw new Error();
+          const data = await res.json();
+          setFirstName(data.first_name || "");
+          setLastName(data.last_name || "");
+          setCompanyName(data.company_name || "");
+          setDisplayAsCompany(data.display_as_company || false);
+          setPhoneNumber(data.phone_number || "");
+          if (data.profile_picture) setPreviewUrl(data.profile_picture);
+        } catch {
+          toast.error("Could not load profile info.");
         }
-      } catch (error) {
-        console.error("Error fetching profile:", error);
-        toast.error("Could not load profile info.");
-      }
-    };
-
-    if (user) fetchProfile();
+      })();
+    }
   }, []);
 
   const handleEmailUpdate = async () => {
@@ -65,50 +65,107 @@ export default function AccountSettings() {
   };
 
   const handlePasswordUpdate = async () => {
-    const user = auth.currentUser;
     try {
+      const user = auth.currentUser;
       await signInWithEmailAndPassword(auth, user.email, currentPassword);
       await updatePassword(user, newPassword);
-      setNewPassword("");
       setCurrentPassword("");
+      setNewPassword("");
       toast.success("Password updated!");
-    } catch (err) {
+    } catch {
       toast.error("Current password is incorrect or update failed.");
     }
   };
 
+  // Highlight Analytics tab when on /analytics
+  const isAnalyticsActive = location.pathname === "/analytics";
+
   return (
     <div style={styles.container}>
       <h1 style={styles.heading}>Account settings</h1>
+
       <div style={styles.tabsRow}>
-        <div onClick={() => setActiveTab("profile")} style={{ ...styles.tab, ...(activeTab === "profile" ? styles.activeTab : {}) }}>Profile</div>
-        <div onClick={() => setActiveTab("security")} style={{ ...styles.tab, ...(activeTab === "security" ? styles.activeTab : {}) }}>Security</div>
+        <div
+          onClick={() => setActiveTab("profile")}
+          style={{
+            ...styles.tab,
+            ...(activeTab === "profile" ? styles.activeTab : {}),
+          }}
+        >
+          Profile
+        </div>
+
+        <div
+          onClick={() => setActiveTab("security")}
+          style={{
+            ...styles.tab,
+            ...(activeTab === "security" ? styles.activeTab : {}),
+          }}
+        >
+          Security
+        </div>
+
+        <div
+          onClick={() => navigate("/analytics")}
+          style={{
+            ...styles.tab,
+            ...(isAnalyticsActive ? styles.activeTab : {}),
+          }}
+        >
+          Analytics
+        </div>
       </div>
 
-      {activeTab === "profile" && (
+      {/* Profile Form */}
+      {activeTab === "profile" && !isAnalyticsActive && (
         <div style={styles.profileTab}>
           <div style={styles.profileGrid}>
             <div style={styles.leftColumn}>
               <label style={styles.label}>First Name*</label>
-              <input style={styles.input} value={firstName} onChange={e => setFirstName(e.target.value)} />
+              <input
+                style={styles.input}
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+              />
 
               <label style={styles.label}>Last Name*</label>
-              <input style={styles.input} value={lastName} onChange={e => setLastName(e.target.value)} />
+              <input
+                style={styles.input}
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+              />
 
               <label style={styles.label}>Company</label>
-              <input style={styles.input} value={companyName} onChange={e => setCompanyName(e.target.value)} />
+              <input
+                style={styles.input}
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+              />
 
               <div style={styles.checkboxRow}>
-                <input type="checkbox" checked={displayAsCompany} onChange={e => setDisplayAsCompany(e.target.checked)} />
-                <label style={{ marginLeft: 8 }}>Display as a company?</label>
+                <input
+                  type="checkbox"
+                  checked={displayAsCompany}
+                  onChange={(e) =>
+                    setDisplayAsCompany(e.target.checked)
+                  }
+                />
+                <label style={{ marginLeft: 8 }}>
+                  Display as a company?
+                </label>
               </div>
 
               <label style={styles.label}>Phone number</label>
-              <input style={styles.input} value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} />
+              <input
+                style={styles.input}
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+              />
 
-              <button style={styles.updateBtn}>Update</button>
+              <button style={styles.updateBtn}>
+                Update Profile
+              </button>
             </div>
-
             <div style={styles.rightColumn}>
               <div style={styles.avatarWrapper}>
                 <img
@@ -138,30 +195,54 @@ export default function AccountSettings() {
         </div>
       )}
 
-      {activeTab === "security" && (
+      {/* Security Form */}
+      {activeTab === "security" && !isAnalyticsActive && (
         <div style={styles.securityTab}>
           <div style={styles.formField}>
             <label style={styles.label}>Change Email</label>
-            <input type="email" style={styles.input} value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
-            <button style={styles.saveBtn} onClick={handleEmailUpdate}>Save Email</button>
+            <input
+              type="email"
+              style={styles.input}
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+            />
+            <button style={styles.saveBtn} onClick={handleEmailUpdate}>
+              Save Email
+            </button>
           </div>
 
           <div style={styles.formField}>
             <label style={styles.label}>Current Password</label>
-            <input type="password" style={styles.input} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+            <input
+              type="password"
+              style={styles.input}
+              value={currentPassword}
+              onChange={(e) =>
+                setCurrentPassword(e.target.value)
+              }
+            />
           </div>
 
           <div style={styles.formField}>
             <label style={styles.label}>New Password</label>
-            <input type="password" style={styles.input} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-            <button style={styles.saveBtn} onClick={handlePasswordUpdate}>Save Password</button>
+            <input
+              type="password"
+              style={styles.input}
+                  value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+            <button
+              style={styles.saveBtn}
+              onClick={handlePasswordUpdate}
+            >
+              Save Password
+            </button>
           </div>
         </div>
       )}
     </div>
   );
 }
-
 
 const styles = {
   container: {
@@ -186,28 +267,20 @@ const styles = {
     cursor: "pointer",
     borderBottom: "3px solid transparent",
     color: "#666",
+    marginRight: "1rem",
   },
   activeTab: {
     borderBottom: "3px solid #22c55e",
     color: "#111",
     fontWeight: "600",
   },
-  profileTab: {},
   profileGrid: {
     display: "flex",
     gap: "2rem",
   },
-  leftColumn: {
-    flex: 2,
-  },
-  rightColumn: {
-    flex: 1,
-    textAlign: "center",
-  },
-  avatarWrapper: {
-    position: "relative",
-    display: "inline-block",
-  },
+  leftColumn: { flex: 2 },
+  rightColumn: { flex: 1, textAlign: "center" },
+  avatarWrapper: { position: "relative", display: "inline-block" },
   avatar: {
     width: "100px",
     height: "100px",
@@ -226,11 +299,7 @@ const styles = {
     border: "1px solid #ccc",
     cursor: "pointer",
   },
-  label: {
-    display: "block",
-    marginBottom: "0.25rem",
-    fontWeight: 500,
-  },
+  label: { display: "block", marginBottom: "0.25rem", fontWeight: 500 },
   input: {
     width: "100%",
     padding: "0.6rem",
@@ -238,11 +307,7 @@ const styles = {
     borderRadius: "6px",
     marginBottom: "1rem",
   },
-  checkboxRow: {
-    display: "flex",
-    alignItems: "center",
-    marginBottom: "1rem",
-  },
+  checkboxRow: { display: "flex", alignItems: "center", marginBottom: "1rem" },
   updateBtn: {
     backgroundColor: "#22c55e",
     color: "white",
@@ -260,10 +325,6 @@ const styles = {
     marginTop: "0.5rem",
     cursor: "pointer",
   },
-  formField: {
-    marginBottom: "2rem",
-  },
-  securityTab: {
-    maxWidth: "500px",
-  },
+  formField: { marginBottom: "2rem" },
+  securityTab: { maxWidth: "500px" },
 };

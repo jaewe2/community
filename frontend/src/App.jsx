@@ -4,9 +4,10 @@ import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 
 // 🔧 Pages & Components
-import Login from "./Auth/Login"; // ✅ FIXED
-import Register from "./Auth/Register"; // ✅ FIXED
+import Login from "./Auth/Login";
+import Register from "./Auth/Register";
 import Dashboard from "./pages/Dashboard";
+import Analytics from "./pages/Analytics";       // ← added
 import PostAdPage from "./pages/PostAdPage";
 import MyAdsPage from "./pages/MyAdsPage";
 import MyMessages from "./MyMessages";
@@ -46,7 +47,22 @@ export default function App() {
           <Route path="/order-confirmation/success" element={<StripeSuccessPage />} />
 
           {/* Protected routes */}
-          <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/analytics"                     /* ← new Analytics route */
+            element={
+              <PrivateRoute>
+                <Analytics />
+              </PrivateRoute>
+            }
+          />
           <Route path="/post" element={<PrivateRoute><PostAdPage /></PrivateRoute>} />
           <Route path="/my-ads" element={<PrivateRoute><MyAdsPage /></PrivateRoute>} />
           <Route path="/favorites" element={<PrivateRoute><Favorites /></PrivateRoute>} />
