@@ -1,3 +1,4 @@
+# api/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
@@ -16,7 +17,12 @@ from .views import (
     OfferingViewSet,
     OrderViewSet,
     CreatePaymentIntent,
-    CreateStripeSession,  # ✅ Added this for unified checkout
+    CreateStripeSession,
+    # 🔥 Analytics views
+    UserOverviewView,
+    UserPostsByMonthView,
+    UserSalesByMonthView,
+    UserSalesByCategoryView,
 )
 
 router = DefaultRouter()
@@ -37,9 +43,31 @@ urlpatterns = [
     path('postings/<int:id>/', PostingDetailView.as_view(), name='posting-detail'),
     path('user/profile/', UserProfileView.as_view(), name='user-profile'),
 
-    # ✅ Stripe API endpoints
+    # Stripe API endpoints
     path('create-payment-intent/', CreatePaymentIntent.as_view(), name='create-payment-intent'),
     path('create-stripe-session/', CreateStripeSession.as_view(), name='create-stripe-session'),
+
+    # 🔥 Analytics: user‑scoped endpoints
+    path(
+        'analytics/user/overview/',
+        UserOverviewView.as_view(),
+        name='analytics-user-overview'
+    ),
+    path(
+        'analytics/user/posts-by-month/',
+        UserPostsByMonthView.as_view(),
+        name='analytics-user-posts-by-month'
+    ),
+    path(
+        'analytics/user/sales-by-month/',
+        UserSalesByMonthView.as_view(),
+        name='analytics-user-sales-by-month'
+    ),
+    path(
+        'analytics/user/sales-by-category/',
+        UserSalesByCategoryView.as_view(),
+        name='analytics-user-sales-by-category'
+    ),
 ]
 
 # WebSocket routes

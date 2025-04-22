@@ -21,17 +21,20 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = "__all__"
 
+
 # 🖼️ Posting Image Serializer
 class PostingImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = PostingImage
         fields = ["id", "image"]
 
+
 # 🔖 Tag Serializer
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         fields = ["id", "name"]
+
 
 # 🔗 ListingTag Serializer
 class ListingTagSerializer(serializers.ModelSerializer):
@@ -41,17 +44,20 @@ class ListingTagSerializer(serializers.ModelSerializer):
         model = ListingTag
         fields = ["id", "tag"]
 
+
 # 💳 PaymentMethod Serializer
 class PaymentMethodSerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentMethod
         fields = ["id", "name", "icon"]
 
+
 # 🎁 Offering Serializer
 class OfferingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Offering
         fields = ["id", "name", "description", "extra_cost"]
+
 
 # 📦 CommunityPosting Serializer
 class CommunityPostingSerializer(serializers.ModelSerializer):
@@ -101,6 +107,7 @@ class CommunityPostingSerializer(serializers.ModelSerializer):
             "offerings_ids",
         ]
 
+
 # ❤️ Favorite Serializer
 class FavoriteSerializer(serializers.ModelSerializer):
     user = serializers.ReadOnlyField(source="user.email")
@@ -111,6 +118,7 @@ class FavoriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Favorite
         fields = ["id", "user", "listing", "listing_title", "listing_images", "created_at"]
+
 
 # 💬 Full Message Serializer
 class MessageSerializer(serializers.ModelSerializer):
@@ -137,6 +145,7 @@ class MessageSerializer(serializers.ModelSerializer):
             "read",
         ]
 
+
 # ✉️ Simplified Message Create Serializer
 class MessageCreateSerializer(serializers.ModelSerializer):
     sender = serializers.ReadOnlyField(source="sender.email")
@@ -147,6 +156,7 @@ class MessageCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Message
         fields = ["id", "sender", "recipient", "listing", "content"]
+
 
 # 🔐 User Profile Serializer
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -169,6 +179,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "is_admin",
         ]
         read_only_fields = ["email", "username", "is_buyer", "is_seller", "is_admin"]
+
 
 # 🧾 Order Serializer (📦 with listing/payment display + shipping)
 class OrderSerializer(serializers.ModelSerializer):
@@ -221,3 +232,28 @@ class OrderSerializer(serializers.ModelSerializer):
         order = Order.objects.create(**validated_data)
         order.offerings.set(offerings)
         return order
+
+
+# ─── Analytics Serializers ───────────────────────────────────────────────────
+
+class OverviewSerializer(serializers.Serializer):
+    postsThisMonth = serializers.IntegerField()
+    totalPosts      = serializers.IntegerField()
+    salesThisMonth  = serializers.IntegerField()
+    totalSales      = serializers.IntegerField()
+
+
+class MonthCountSerializer(serializers.Serializer):
+    # now handles date or datetime, always outputs "YYYY‑MM"
+    month = serializers.SerializerMethodField()
+    count = serializers.IntegerField()
+
+    def get_month(self, obj):
+        # obj is a dict coming from .values('month','count')
+        m = obj.get("month")
+        return m.strftime("%Y-%m") if m else None
+
+
+class CategoryValueSerializer(serializers.Serializer):
+    category = serializers.CharField()
+    value    = serializers.IntegerField()
