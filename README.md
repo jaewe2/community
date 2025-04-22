@@ -10,6 +10,8 @@ npm install peerjs
 
 npm install socket.io-client
 
+npm install jspdf
+
 
 backend dependencies:
 
@@ -29,4 +31,9 @@ python manage.py runserver
 
 Other backend stuff:
 http://127.0.0.1:8000/admin/ -- via browser for admin panel, add catagories, community postings, etc permission control.
+
+
+Geolocation operations (via terminal, could vary on system):
+brew install gdal
+
 

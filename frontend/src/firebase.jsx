@@ -1,6 +1,6 @@
 // src/firebase.jsx
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
 
 // Your web app's Firebase configuration
@@ -18,5 +18,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 
-// Initialize Firebase Auth and export it
-export const auth = getAuth(app);
+// Auth
+const auth = getAuth(app);
+
+export { auth, signInWithEmailAndPassword };

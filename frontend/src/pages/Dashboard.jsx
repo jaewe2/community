@@ -2,19 +2,21 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
-import "./App.css";
-import "./Dashboard.css";
 
 const LandingPage = () => {
   const [categories, setCategories] = useState([]);
+  const [allListings, setAllListings] = useState([]);
   const [listings, setListings] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  // Store category name in state for the dropdown
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [loading, setLoading] = useState(true);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [searchSuggestions, setSearchSuggestions] = useState([]);
-  
+  // New state to store geolocation coordinates
+  const [geoCoordinates, setGeoCoordinates] = useState({ lat: null, lng: null });
+
   const navigate = useNavigate(); // useNavigate hook to navigate programmatically
 
   // Fetch categories and listings from the backend
@@ -25,9 +27,10 @@ const LandingPage = () => {
         const categoryResponse = await axios.get("http://127.0.0.1:8000/api/categories/");
         setCategories(categoryResponse.data);
 
-        // Fetch listings
+        // Fetch listings (if you want to display them on the landing page)
         const listingsResponse = await axios.get("http://127.0.0.1:8000/api/postings/");
         setListings(listingsResponse.data);
+        setAllListings(listingsResponse.data); // Store the full listings data separately
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -38,7 +41,7 @@ const LandingPage = () => {
     fetchData();
   }, []);
 
-  // Handle search query change with debouncing
+  // Handle search query change with debouncing (still used for suggestions)
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
@@ -47,26 +50,25 @@ const LandingPage = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Handle search functionality
-  const handleSearch = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get("http://127.0.0.1:8000/api/postings/", {
-        params: {
-          search: debouncedSearch,
-          category: selectedCategory,
-          location: selectedLocation,
+  // Get the user's current geolocation when the component mounts
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setGeoCoordinates({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
         },
-      });
-      setListings(response.data); // Update listings with search results
-    } catch (error) {
-      console.error("Error fetching search results:", error);
-    } finally {
-      setLoading(false);
+        (error) => {
+          console.error("Error obtaining geolocation:", error);
+          // Optionally, you can prompt the user for manual input if geolocation fails.
+        }
+      );
     }
-  };
+  }, []);
 
-  // Handle search suggestions (e.g., categories)
+  // Handle search suggestions (e.g., matching category names)
   const handleSearchSuggestions = (query) => {
     if (query.length > 2) {
       // Only show suggestions if query length is more than 2 characters
@@ -79,9 +81,28 @@ const LandingPage = () => {
     }
   };
 
-  // Navigate to Listing Detail page when a listing is clicked
+  // Redirect to the Listings page with search parameters (including geolocation) in the URL.
+  const handleSearch = () => {
+    const queryParams = new URLSearchParams();
+    if (searchQuery) queryParams.set("search", searchQuery);
+    if (selectedCategory) queryParams.set("cat", selectedCategory);
+    if (selectedLocation) queryParams.set("location", selectedLocation);
+    // Add geolocation parameters if available
+    if (geoCoordinates.lat && geoCoordinates.lng) {
+      queryParams.set("lat", geoCoordinates.lat);
+      queryParams.set("lng", geoCoordinates.lng);
+    }
+    navigate(`/listings?${queryParams.toString()}`);
+  };
+
+  // Navigate to Listing Detail page when a listing is clicked.
   const handleListingClick = (listingId) => {
-    navigate(`/listing-detail/${listingId}`); // Navigate to the Listing Detail page
+    navigate(`/listing-detail/${listingId}`); // Navigate to the Listing Detail page.
+  };
+
+  // Navigate to Listings page with a selected category filter (by category name).
+  const handleCategoryClick = (categoryName) => {
+    navigate(`/listings?cat=${encodeURIComponent(categoryName)}`);
   };
 
   if (loading) {
@@ -89,38 +110,39 @@ const LandingPage = () => {
   }
 
   return (
-    <div class="container" style={styles.container}>
-      <header class="header" style={styles.header}>
-        <h1 class="title" style={styles.title}>Buy, Sell, Rent & Exchange in One Click</h1>
-        <p class="subTitle" style={styles.subTitle}>Find everything from used cars to mobile phones and more.</p>
-        <div class="searchContainer" style={styles.searchContainer}>
+    <div style={styles.container}>
+      <header style={styles.header}>
+        <h1 style={styles.title}>Buy, Sell, Rent & Exchange in One Click</h1>
+        <p style={styles.subTitle}>Find everything from used cars to mobile phones and more.</p>
+        <div style={styles.searchContainer}>
           <input
             type="text"
             placeholder="What are you looking for?"
             value={searchQuery}
             onChange={(e) => {
-              setSearchQuery(e.target.value); // Capture search query
-              handleSearchSuggestions(e.target.value); // Update search suggestions
+              setSearchQuery(e.target.value);
+              handleSearchSuggestions(e.target.value);
             }}
-            class="searchInput" style={styles.searchInput}
+            style={styles.searchInput}
           />
           {searchSuggestions.length > 0 && (
-            <div class="suggestionsContainer" style={styles.suggestionsContainer}>
+            <div style={styles.suggestionsContainer}>
               {searchSuggestions.map((suggestion, index) => (
-                <div key={index} class="suggestionItem" style={styles.suggestionItem}>
+                <div key={index} style={styles.suggestionItem}>
                   {suggestion.name}
                 </div>
               ))}
             </div>
           )}
+          {/* Updated dropdown uses category name as value */}
           <select
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)} // Capture selected category
-            class="selectInput" style={styles.selectInput}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            style={styles.selectInput}
           >
             <option value="">Category</option>
             {categories.map((category) => (
-              <option key={category.id} value={category.id}>
+              <option key={category.id} value={category.name}>
                 {category.name}
               </option>
             ))}
@@ -129,43 +151,44 @@ const LandingPage = () => {
             type="text"
             placeholder="Location"
             value={selectedLocation}
-            onChange={(e) => setSelectedLocation(e.target.value)} // Capture selected location
-            class="searchInput" style={styles.searchInput}
+            onChange={(e) => setSelectedLocation(e.target.value)}
+            style={styles.searchInput}
           />
-          <button onClick={handleSearch} class="searchButton" style={styles.searchButton}>
+          <button onClick={handleSearch} style={styles.searchButton}>
             Search Now
           </button>
         </div>
       </header>
 
-      <section class="categoriesContainer" style={styles.categoriesContainer}>
-        <h2 class="sectionTitle" style={styles.sectionTitle}>Popular Categories</h2>
-        <div class="categories" style={styles.categories}>
+      <section style={styles.categoriesContainer}>
+        <h2 style={styles.sectionTitle}>Popular Categories</h2>
+        <div style={styles.categories}>
           {categories.map((category, index) => (
             <div
               key={index}
-              class="categoryCard" style={styles.categoryCard}
-              onClick={() => handleListingClick(category.id)} // Redirect to listings page with selected category
+              style={styles.categoryCard}
+              onClick={() => handleCategoryClick(category.name)}
             >
-              <span class="categoryIcon" style={styles.categoryIcon}>📦</span>
-              <h3 class="categoryName}>{category.name" style={styles.categoryName}>{category.name}</h3>
+              <span style={styles.categoryIcon}>📦</span>
+              <h3 style={styles.categoryName}>{category.name}</h3>
             </div>
           ))}
         </div>
       </section>
 
-      <section class="listingsContainer" style={styles.listingsContainer}>
-        <h2 class="sectionTitle" style={styles.sectionTitle}>Listings Near You</h2>
-        <div class="listings" style={styles.listings}>
+      {/* Optional: Display listings on the landing page */}
+      <section style={styles.listingsContainer}>
+        <h2 style={styles.sectionTitle}>Listings Near You</h2>
+        <div style={styles.listings}>
           {listings.map((listing, index) => (
             <div
               key={index}
-              class="listingCard" style={styles.listingCard}
-              onClick={() => handleListingClick(listing.id)} // Redirect to Listing Detail page
+              style={styles.listingCard}
+              onClick={() => handleListingClick(listing.id)}
             >
-              <h3 class="listingTitle" style={styles.listingTitle}>{listing.title}</h3>
-              <p class="listingDescription" style={styles.listingDescription}>{listing.description}</p>
-              <p class="listingPrice" style={styles.listingPrice}>${listing.price}</p>
+              <h3 style={styles.listingTitle}>{listing.title}</h3>
+              <p style={styles.listingDescription}>{listing.description}</p>
+              <p style={styles.listingPrice}>${listing.price}</p>
             </div>
           ))}
         </div>
@@ -181,7 +204,7 @@ const styles = {
     backgroundColor: "#f4f4f4",
   },
   header: {
-    backgroundColor: "#5A2D76", // Maroon color
+    backgroundColor: "#5A2D76",
     padding: "3rem 1.5rem",
     color: "#fff",
     borderRadius: "8px",
@@ -200,6 +223,7 @@ const styles = {
     display: "flex",
     justifyContent: "center",
     gap: "1rem",
+    position: "relative",
   },
   searchInput: {
     padding: "0.5rem",
@@ -252,7 +276,7 @@ const styles = {
     borderRadius: "8px",
     padding: "1.5rem",
     boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)",
-    cursor: "pointer",  // Makes it clickable
+    cursor: "pointer",
   },
   categoryIcon: {
     fontSize: "2rem",
@@ -275,7 +299,7 @@ const styles = {
     borderRadius: "8px",
     padding: "1.5rem",
     boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)",
-    cursor: "pointer",  // Makes it look clickable
+    cursor: "pointer",
   },
   listingTitle: {
     fontSize: "1.4rem",

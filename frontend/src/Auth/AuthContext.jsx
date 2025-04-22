@@ -1,31 +1,32 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { auth } from "./firebase";
+import { auth } from "../firebase";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // user data from Django
+  const [user, setUser] = useState(null); // Django profile
   const [loading, setLoading] = useState(true);
 
-  // ✅ Fetch user profile from Django
   const fetchUserProfile = async () => {
     setLoading(true);
     try {
-      const token = await auth.currentUser?.getIdToken();
-      const response = await fetch("http://127.0.0.1:8000/api/user/profile", {
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) throw new Error("No Firebase user");
+
+      const token = await firebaseUser.getIdToken();
+
+      const response = await fetch("http://127.0.0.1:8000/api/user/profile/", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data);
-      } else {
-        setUser(null);
-      }
+      if (!response.ok) throw new Error("Failed to fetch profile");
+
+      const data = await response.json();
+      setUser(data);
     } catch (err) {
-      console.error("Failed to load profile:", err);
+      console.error("Fetch profile error:", err);
       setUser(null);
     } finally {
       setLoading(false);
@@ -33,9 +34,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       if (firebaseUser) {
-        fetchUserProfile();
+        await fetchUserProfile();
       } else {
         setUser(null);
         setLoading(false);
@@ -46,7 +47,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, setUser }}>
+    <AuthContext.Provider value={{ user, loading, setUser, fetchUserProfile }}>
       {children}
     </AuthContext.Provider>
   );

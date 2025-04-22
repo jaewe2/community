@@ -1,29 +1,36 @@
-// src/Register.jsx
-import React, { useState } from "react";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "./firebase";
+import React, { useEffect, useState } from "react";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebase";
 import { useNavigate, Link } from "react-router-dom";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import "./App.css";
+import "./Login.css";
 
-export default function Register() {
+export default function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
 
-  const RegisterSchema = Yup.object().shape({
+  // ✅ Redirect if user is already logged in
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        navigate("/dashboard");
+      }
+    });
+    return () => unsubscribe();
+  }, [navigate]);
+
+  const LoginSchema = Yup.object().shape({
     email: Yup.string().email("Invalid email").required("Required"),
     password: Yup.string().min(6, "Min 6 characters").required("Required"),
-    confirmPassword: Yup.string()
-      .required("Required")
-      .oneOf([Yup.ref("password"), null], "Passwords must match"),
   });
 
-  const handleRegister = async (values, { setSubmitting }) => {
+  const handleLogin = async (values, { setSubmitting }) => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       const token = await userCredential.user.getIdToken();
 
       const response = await fetch("http://127.0.0.1:8000/api/verify-token/", {
@@ -35,9 +42,9 @@ export default function Register() {
       const data = await response.json();
 
       if (response.ok) {
-        toast.success("Registration successful!", {
+        toast.success(`Welcome, ${data.email}`, {
           className: "custom-toast custom-toast-success",
-          icon: "🎉",
+          icon: "✅",
         });
         navigate("/dashboard");
       } else {
@@ -47,7 +54,7 @@ export default function Register() {
         });
       }
     } catch (error) {
-      toast.error(`Registration failed: ${error.message}`, {
+      toast.error(`Login failed: ${error.message}`, {
         className: "custom-toast custom-toast-error",
         icon: "❌",
       });
@@ -57,13 +64,13 @@ export default function Register() {
   };
 
   return (
-    <div style={styles.container}>
+    <div id="bg" style={styles.container}>
       <div style={styles.card}>
-        <h2 style={styles.title}>Register</h2>
+        <h2 style={styles.title}>Login</h2>
         <Formik
-          initialValues={{ email: "", password: "", confirmPassword: "" }}
-          validationSchema={RegisterSchema}
-          onSubmit={handleRegister}
+          initialValues={{ email: "", password: "" }}
+          validationSchema={LoginSchema}
+          onSubmit={handleLogin}
         >
           {({ isSubmitting }) => (
             <Form>
@@ -86,28 +93,12 @@ export default function Register() {
               </div>
               <ErrorMessage name="password" component="div" style={styles.error} />
 
-              <div style={styles.passwordGroup}>
-                <Field
-                  style={styles.input}
-                  type={showConfirm ? "text" : "password"}
-                  name="confirmPassword"
-                  placeholder="Confirm Password"
-                />
-                <span
-                  style={styles.toggle}
-                  onClick={() => setShowConfirm((prev) => !prev)}
-                >
-                  {showConfirm ? "Hide" : "Show"}
-                </span>
-              </div>
-              <ErrorMessage name="confirmPassword" component="div" style={styles.error} />
-
               <button style={styles.button} type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Registering..." : "Register"}
+                {isSubmitting ? "Logging in..." : "Log In"}
               </button>
 
               <p style={styles.link}>
-                Already have an account? <Link to="/login">Log in here</Link>
+                Need an account? <Link to="/register">Register here</Link>
               </p>
             </Form>
           )}
@@ -160,7 +151,7 @@ const styles = {
   button: {
     width: "100%",
     padding: "10px",
-    background: "#28a745",
+    background: "#007bff",
     color: "#fff",
     border: "none",
     borderRadius: "4px",

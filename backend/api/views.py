@@ -6,31 +6,31 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.decorators import action
 from django.db.models import Q
+from django.conf import settings
+from django.core.mail import send_mail
+import stripe
 
-# Firebase Admin
 from firebase_admin import auth as firebase_auth
 import api.firebase_admin_setup
+from django.contrib.auth import get_user_model
 
-# Models & Serializers
 from .models import (
-    CommunityPosting, Category, PostingImage, Favorite, Tag, ListingTag, Message
+    CommunityPosting, Category, PostingImage, Favorite,
+    Tag, ListingTag, Message, PaymentMethod, Offering, Order
 )
 from .serializers import (
     CommunityPostingSerializer, CategorySerializer, FavoriteSerializer,
     TagSerializer, ListingTagSerializer, MessageSerializer, MessageCreateSerializer,
-    UserProfileSerializer  # Added for user profile
+    UserProfileSerializer, PaymentMethodSerializer, OfferingSerializer, OrderSerializer
 )
 
-from django.contrib.auth import get_user_model
 User = get_user_model()
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
-# 🔓 Public HelloWorld
 class HelloWorldView(APIView):
     def get(self, request):
         return Response({"message": "Hello from Django!"})
 
-
-# 🔐 Firebase Token Verification
 class VerifyFirebaseToken(APIView):
     permission_classes = [AllowAny]
 
@@ -39,34 +39,55 @@ class VerifyFirebaseToken(APIView):
         if not id_token:
             return Response({"error": "Token missing"}, status=400)
         try:
-            decoded_token = firebase_auth.verify_id_token(id_token)
-            uid = decoded_token["uid"]
-            email = decoded_token.get("email")
-            return Response({"uid": uid, "email": email})
+            decoded = firebase_auth.verify_id_token(id_token)
+            return Response({"uid": decoded["uid"], "email": decoded.get("email")})
         except Exception as e:
             return Response({"error": str(e)}, status=401)
 
-
-# 📄 Individual Listing Detail
 class PostingDetailView(RetrieveAPIView):
     queryset = CommunityPosting.objects.all()
     serializer_class = CommunityPostingSerializer
     permission_classes = [AllowAny]
-    lookup_field = 'id'
+    lookup_field = "id"
 
-
-# 📦 Postings CRUD with file upload support
 class CommunityPostingViewSet(viewsets.ModelViewSet):
-    queryset = CommunityPosting.objects.all()
     serializer_class = CommunityPostingSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     parser_classes = [MultiPartParser, FormParser]
 
+    def get_queryset(self):
+        qs = CommunityPosting.objects.all().order_by("-created_at")
+        if self.action == "list" and self.request.user.is_authenticated:
+            if self.request.query_params.get("mine") in ["true", "1", "yes"]:
+                qs = qs.filter(user=self.request.user)
+        return qs
+
+    @action(detail=False, methods=["get"], url_path="my-ads", permission_classes=[IsAuthenticated])
+    def my_ads(self, request):
+        qs = CommunityPosting.objects.filter(user=request.user).order_by("-created_at")
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
     def perform_create(self, serializer):
         posting = serializer.save(user=self.request.user)
-        images = self.request.FILES.getlist("images")
-        for image in images:
+        for image in self.request.FILES.getlist("images"):
             PostingImage.objects.create(posting=posting, image=image)
+
+    def perform_update(self, serializer):
+        posting = serializer.save()
+        for image in self.request.FILES.getlist("images"):
+            PostingImage.objects.create(posting=posting, image=image)
+        deleted_ids = self.request.data.getlist("deleted_images")
+        try:
+            deleted_ids = [int(i) for i in deleted_ids if str(i).isdigit()]
+            if deleted_ids:
+                PostingImage.objects.filter(posting=posting, id__in=deleted_ids).delete()
+        except Exception:
+            pass
 
     def destroy(self, request, *args, **kwargs):
         posting = self.get_object()
@@ -74,15 +95,21 @@ class CommunityPostingViewSet(viewsets.ModelViewSet):
             return Response({"error": "You can only delete your own listings."}, status=status.HTTP_403_FORBIDDEN)
         return super().destroy(request, *args, **kwargs)
 
-
-# 📚 Categories CRUD
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [AllowAny]
 
+class PaymentMethodViewSet(viewsets.ModelViewSet):
+    queryset = PaymentMethod.objects.all()
+    serializer_class = PaymentMethodSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
-# ❤️ Favorites CRUD scoped to user
+class OfferingViewSet(viewsets.ModelViewSet):
+    queryset = Offering.objects.all()
+    serializer_class = OfferingSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
 class FavoriteViewSet(viewsets.ModelViewSet):
     serializer_class = FavoriteSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -93,46 +120,33 @@ class FavoriteViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-
-# 🔖 Tags CRUD
 class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     permission_classes = [AllowAny]
 
-
-# 🔗 Listing-Tag Relation
 class ListingTagViewSet(viewsets.ModelViewSet):
     queryset = ListingTag.objects.all()
     serializer_class = ListingTagSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
-
-# 💬 Messages CRUD scoped to sender + inbox endpoint
 class MessageViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
-        return Message.objects.filter(
-            Q(sender=user) | Q(recipient=user)
-        ).order_by('-created_at')
+        return Message.objects.filter(Q(sender=user) | Q(recipient=user)).order_by("-created_at")
 
     def get_serializer_class(self):
-        if self.action == 'create':
-            return MessageCreateSerializer
-        return MessageSerializer
+        return MessageCreateSerializer if self.action == "create" else MessageSerializer
 
     def perform_create(self, serializer):
         serializer.save(sender=self.request.user)
 
     @action(detail=False, methods=["get"], url_path="inbox")
     def inbox(self, request):
-        user = request.user
-        messages = Message.objects.filter(
-            Q(sender=user) | Q(recipient=user)
-        ).order_by('-created_at')
-        serializer = self.get_serializer(messages, many=True)
+        msgs = Message.objects.filter(Q(sender=request.user) | Q(recipient=request.user)).order_by("-created_at")
+        serializer = self.get_serializer(msgs, many=True)
         return Response(serializer.data)
 
     @action(detail=False, methods=["post"], url_path="send")
@@ -142,73 +156,146 @@ class MessageViewSet(viewsets.ModelViewSet):
         content = request.data.get("content")
         listing_id = request.data.get("listing_id")
 
-        if not recipient_id or not content or not listing_id:
-            return Response({"error": "Recipient, content, and listing_id are required."}, status=400)
+        if not (recipient_id and content and listing_id):
+            return Response({"error": "recipient_id, content & listing_id are required."}, status=400)
 
         try:
-            recipient = User.objects.get(id=recipient_id)
             listing = CommunityPosting.objects.get(id=listing_id)
-        except (User.DoesNotExist, CommunityPosting.DoesNotExist):
-            return Response({"error": "Invalid recipient or listing."}, status=400)
+            recipient = User.objects.get(id=recipient_id)
+        except (CommunityPosting.DoesNotExist, User.DoesNotExist):
+            return Response({"error": "Invalid listing or recipient."}, status=400)
 
-        message = Message.objects.create(
-            sender=sender,
-            recipient=recipient,
-            content=content,
-            listing=listing
-        )
+        if listing.user == sender:
+            return Response({"error": "Cannot message your own listing."}, status=403)
 
-        return Response(MessageSerializer(message).data, status=201)
+        msg = Message.objects.create(sender=sender, recipient=recipient, content=content, listing=listing)
+        return Response(MessageSerializer(msg).data, status=201)
 
     @action(detail=True, methods=["post"], url_path="reply")
     def reply(self, request, pk=None):
-        original_message = self.get_object()
+        orig = self.get_object()
         content = request.data.get("content")
-
         if not content:
-            return Response({"error": "Content is required."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Content required."}, status=400)
+        reply = Message.objects.create(listing=orig.listing, sender=request.user, recipient=orig.sender, content=content)
+        return Response(MessageSerializer(reply).data, status=201)
 
-        new_message = Message.objects.create(
-            listing=original_message.listing,
-            sender=request.user,
-            recipient=original_message.sender,
-            content=content
-        )
-        serializer = MessageSerializer(new_message)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-
-# 👤 User Profile View (GET, PATCH, PUT)
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
     def get(self, request):
-        """
-        Get the user profile details.
-        """
-        user = request.user
-        serializer = UserProfileSerializer(user)
-        return Response(serializer.data)
+        try:
+            id_token = request.META.get("HTTP_AUTHORIZATION", "").split()[-1]
+            decoded = firebase_auth.verify_id_token(id_token)
+            email = decoded.get("email")
+            user, _ = User.objects.get_or_create(email=email, defaults={"username": email.split("@")[0], "is_active": True})
+        except Exception:
+            return Response({"error": "Invalid token."}, status=401)
+
+        return Response(UserProfileSerializer(user).data)
 
     def put(self, request):
-        """
-        Update the full user profile (replace all fields).
-        """
-        user = request.user
-        serializer = UserProfileSerializer(user, data=request.data, partial=False)
+        serializer = UserProfileSerializer(request.user, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=400)
 
     def patch(self, request):
-        """
-        Partially update the user profile.
-        """
-        user = request.user
-        serializer = UserProfileSerializer(user, data=request.data, partial=True)
+        serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=400)
+
+class OrderViewSet(viewsets.ModelViewSet):
+    serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Order.objects.filter(buyer=self.request.user).order_by("-created_at")
+
+    def perform_create(self, serializer):
+        order = serializer.save(buyer=self.request.user)
+        if order.buyer.email:
+            try:
+                addr = order.address_details or {}
+                message = (
+                    f"Hi {addr.get('first_name', '')} {addr.get('last_name', '')},\n\n"
+                    f"Thanks for your purchase on Toro Marketplace!\n\n"
+                    f"\U0001f4e6 Listing: {order.listing.title}\n"
+                    f"\U0001f4b3 Payment: {order.payment_method.name}\n"
+                    f"\U0001f4b0 Total: ${order.total_price}\n"
+                    f"\U0001f4cd Status: {order.status}\n"
+                    f"\U0001f553 Placed: {order.created_at.strftime('%Y-%m-%d %H:%M')}\n\n"
+                    f"\U0001f4ec Shipping Address:\n"
+                    f"{addr.get('street', '')}\n"
+                    f"{addr.get('city', '')}, {addr.get('state', '')} {addr.get('zip', '')}\n"
+                    f"{addr.get('country', '')}\n"
+                    f"Email: {addr.get('email', '')}\n"
+                    f"Phone: {addr.get('phone', '')}\n\n"
+                    f"You can view your receipt or manage your order in your dashboard.\n\n"
+                    f"Toro Marketplace \U0001f402"
+                )
+
+                send_mail(
+                    subject=f"\u2705 Order Confirmation – Order #{order.id}",
+                    message=message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[order.buyer.email],
+                    fail_silently=True,
+                )
+            except Exception as e:
+                print(f"[!] Email sending failed: {e}")
+
+class CreatePaymentIntent(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            amount = float(request.data.get("amount", 0))
+            if amount <= 0:
+                return Response({"error": "Invalid amount"}, status=400)
+
+            intent = stripe.PaymentIntent.create(
+                amount=int(amount * 100),
+                currency="usd",
+                automatic_payment_methods={"enabled": True},
+            )
+            return Response({"client_secret": intent.client_secret})
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+class CreateStripeSession(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            listing_id = request.data.get("listing_id")
+            listing = CommunityPosting.objects.get(id=listing_id)
+
+            session = stripe.checkout.Session.create(
+                mode="payment",
+                payment_method_types=["card"],
+                line_items=[{
+                    "price_data": {
+                        "currency": "usd",
+                        "unit_amount": int(listing.price * 100),
+                        "product_data": {
+                            "name": listing.title,
+                            "description": listing.description,
+                        },
+                    },
+                    "quantity": 1,
+                }],
+                billing_address_collection="required",
+                success_url="http://localhost:3000/order-confirmation/success?session_id={CHECKOUT_SESSION_ID}",
+                cancel_url="http://localhost:3000/checkout/cancel",
+            )
+
+            return Response({"sessionId": session.id})
+        except CommunityPosting.DoesNotExist:
+            return Response({"error": "Listing not found"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
