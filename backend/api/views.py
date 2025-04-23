@@ -1,3 +1,5 @@
+# api/views.py
+
 from datetime import date
 
 import stripe
@@ -19,8 +21,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import (
-    CommunityPosting, Category, PostingImage, Favorite,
-    Tag, ListingTag, Message, PaymentMethod, Offering, Order
+    CommunityPosting,
+    Category,
+    PostingImage,
+    Favorite,
+    Tag,
+    ListingTag,
+    Message,
+    PaymentMethod,
+    Offering,
+    Order,
 )
 from .serializers import (
     CommunityPostingSerializer,
@@ -54,12 +64,12 @@ class VerifyFirebaseToken(APIView):
     def post(self, request):
         id_token = request.data.get("token")
         if not id_token:
-            return Response({"error": "Token missing"}, status=400)
+            return Response({"error": "Token missing"}, status=status.HTTP_400_BAD_REQUEST)
         try:
             decoded = firebase_auth.verify_id_token(id_token)
             return Response({"uid": decoded["uid"], "email": decoded.get("email")})
         except Exception as e:
-            return Response({"error": str(e)}, status=401)
+            return Response({"error": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class PostingDetailView(RetrieveAPIView):
@@ -70,6 +80,11 @@ class PostingDetailView(RetrieveAPIView):
 
 
 class CommunityPostingViewSet(viewsets.ModelViewSet):
+    """
+    /api/postings/             → all listings (with ?mine=)
+    /api/postings/{id}/         → detail, update, delete
+    /api/postings/{id}/orders/  → orders placed on this listing (seller only)
+    """
     serializer_class = CommunityPostingSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     parser_classes = [MultiPartParser, FormParser]
@@ -116,6 +131,27 @@ class CommunityPostingViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
         return super().destroy(request, *args, **kwargs)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="orders",
+        permission_classes=[IsAuthenticated],
+    )
+    def orders(self, request, pk=None):
+        """
+        Seller-only: list all orders placed on this listing.
+        GET /api/postings/{id}/orders/
+        """
+        posting = self.get_object()
+        if posting.user != request.user:
+            return Response(
+                {"error": "You don’t have permission to view these orders."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        qs = Order.objects.filter(listing=posting).order_by("-created_at")
+        serializer = OrderSerializer(qs, many=True)
+        return Response(serializer.data)
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -164,17 +200,23 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return Message.objects.filter(Q(sender=user) | Q(recipient=user)).order_by("-created_at")
+        return Message.objects.filter(
+            Q(sender=user) | Q(recipient=user)
+        ).order_by("-created_at")
 
     def get_serializer_class(self):
-        return MessageCreateSerializer if self.action == "create" else MessageSerializer
+        return (
+            MessageCreateSerializer
+            if self.action == "create"
+            else MessageSerializer
+        )
 
     def perform_create(self, serializer):
         serializer.save(sender=self.request.user)
 
     @action(detail=False, methods=["get"], url_path="inbox")
     def inbox(self, request):
-        msgs = Message.objects.filter(Q(sender=request.user) | Q(recipient=request.user)).order_by("-created_at")
+        msgs = self.get_queryset()
         serializer = self.get_serializer(msgs, many=True)
         return Response(serializer.data)
 
@@ -188,17 +230,17 @@ class MessageViewSet(viewsets.ModelViewSet):
         if not (recipient_id and content and listing_id):
             return Response(
                 {"error": "recipient_id, content & listing_id are required."},
-                status=400
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
             listing = CommunityPosting.objects.get(id=listing_id)
             recipient = User.objects.get(id=recipient_id)
         except (CommunityPosting.DoesNotExist, User.DoesNotExist):
-            return Response({"error": "Invalid listing or recipient."}, status=400)
+            return Response({"error": "Invalid listing or recipient."}, status=status.HTTP_400_BAD_REQUEST)
 
         if listing.user == sender:
-            return Response({"error": "Cannot message your own listing."}, status=403)
+            return Response({"error": "Cannot message your own listing."}, status=status.HTTP_403_FORBIDDEN)
 
         msg = Message.objects.create(
             sender=sender,
@@ -206,21 +248,53 @@ class MessageViewSet(viewsets.ModelViewSet):
             content=content,
             listing=listing
         )
-        return Response(MessageSerializer(msg).data, status=201)
+        return Response(MessageSerializer(msg).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"], url_path="reply")
     def reply(self, request, pk=None):
         orig = self.get_object()
         content = request.data.get("content")
         if not content:
-            return Response({"error": "Content required."}, status=400)
+            return Response({"error": "Content required."}, status=status.HTTP_400_BAD_REQUEST)
         reply = Message.objects.create(
             listing=orig.listing,
             sender=request.user,
             recipient=orig.sender,
             content=content
         )
-        return Response(MessageSerializer(reply).data, status=201)
+        return Response(MessageSerializer(reply).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["post"], url_path="toggle-read")
+    def toggle_read(self, request, pk=None):
+        msg = self.get_object()
+        if msg.recipient != request.user:
+            return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
+        msg.read = not msg.read
+        msg.save(update_fields=["read"])
+        return Response({"id": msg.id, "read": msg.read})
+
+    @action(detail=False, methods=["post"], url_path="mark-read")
+    def mark_read(self, request):
+        ids = request.data.get("ids", [])
+        marked = Message.objects.filter(recipient=request.user, id__in=ids).update(read=True)
+        return Response({"marked": marked})
+
+    @action(
+        detail=False,
+        methods=["delete"],
+        url_path=r"conversation/(?P<listing_id>\d+)",
+        permission_classes=[IsAuthenticated],
+    )
+    def delete_conversation(self, request, listing_id=None):
+        user = request.user
+        qs = Message.objects.filter(listing_id=listing_id).filter(
+            Q(sender=user) | Q(recipient=user)
+        )
+        count, _ = qs.delete()
+        return Response(
+            {"deleted": count},
+            status=status.HTTP_204_NO_CONTENT if count else status.HTTP_404_NOT_FOUND
+        )
 
 
 class UserProfileView(APIView):
@@ -234,13 +308,10 @@ class UserProfileView(APIView):
             email = decoded.get("email")
             user, _ = User.objects.get_or_create(
                 email=email,
-                defaults={
-                    "username": email.split("@")[0],
-                    "is_active": True
-                }
+                defaults={"username": email.split("@")[0], "is_active": True}
             )
         except Exception:
-            return Response({"error": "Invalid token."}, status=401)
+            return Response({"error": "Invalid token."}, status=status.HTTP_401_UNAUTHORIZED)
 
         return Response(UserProfileSerializer(user).data)
 
@@ -249,22 +320,30 @@ class UserProfileView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request):
         serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class OrderViewSet(viewsets.ModelViewSet):
+    """
+    /api/orders/       → orders where you’re the buyer
+    /api/orders/sales/ → orders placed on *your* listings
+    """
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Order.objects.filter(buyer=self.request.user).order_by("-created_at")
+        return (
+            Order.objects
+                 .filter(buyer=self.request.user)
+                 .order_by("-created_at")
+        )
 
     def perform_create(self, serializer):
         order = serializer.save(buyer=self.request.user)
@@ -298,6 +377,21 @@ class OrderViewSet(viewsets.ModelViewSet):
             except Exception as e:
                 print(f"[!] Email sending failed: {e}")
 
+    @action(detail=False, methods=["get"], url_path="sales", permission_classes=[IsAuthenticated])
+    def sales(self, request):
+        qs = (
+            Order.objects
+                 .filter(listing__user=request.user)
+                 .order_by("-created_at")
+        )
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
 
 class CreatePaymentIntent(APIView):
     permission_classes = [IsAuthenticated]
@@ -306,7 +400,7 @@ class CreatePaymentIntent(APIView):
         try:
             amount = float(request.data.get("amount", 0))
             if amount <= 0:
-                return Response({"error": "Invalid amount"}, status=400)
+                return Response({"error": "Invalid amount"}, status=status.HTTP_400_BAD_REQUEST)
 
             intent = stripe.PaymentIntent.create(
                 amount=int(amount * 100),
@@ -315,7 +409,7 @@ class CreatePaymentIntent(APIView):
             )
             return Response({"client_secret": intent.client_secret})
         except Exception as e:
-            return Response({"error": str(e)}, status=500)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CreateStripeSession(APIView):
@@ -347,12 +441,12 @@ class CreateStripeSession(APIView):
 
             return Response({"sessionId": session.id})
         except CommunityPosting.DoesNotExist:
-            return Response({"error": "Listing not found"}, status=404)
+            return Response({"error": "Listing not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({"error": str(e)}, status=500)
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# ─── Analytics: user‑scoped endpoints ────────────────────────────────────────
+# ─── Analytics: user-scoped endpoints ────────────────────────────────────────
 
 class UserOverviewView(APIView):
     permission_classes = [IsAuthenticated]
@@ -456,3 +550,30 @@ class UserSalesByCategoryView(APIView):
         )
         serializer = CategoryValueSerializer(qs, many=True)
         return Response(serializer.data)
+
+
+class UserNotificationsView(APIView):
+    """
+    Returns:
+      - unreadMessages: number of unread messages addressed to the user
+      - newOrdersToday: number of new orders placed today on listings the user owns
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        unread_messages = Message.objects.filter(
+            recipient=user,
+            read=False
+        ).count()
+
+        new_orders_today = Order.objects.filter(
+            listing__user=user,
+            created_at__date=date.today()
+        ).count()
+
+        return Response({
+            "unreadMessages": unread_messages,
+            "newOrdersToday": new_orders_today,
+        })
