@@ -6,6 +6,8 @@ import { signOut } from "firebase/auth";
 import { toast } from "react-toastify";
 import { useAuth } from "./Auth/AuthContext";
 import { FaBell, FaEnvelope } from "react-icons/fa";
+import "./Navbar.css";
+
 
 export default function Navbar() {
   const { user, loading } = useAuth();
