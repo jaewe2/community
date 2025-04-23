@@ -1,3 +1,4 @@
+// src/App.jsx
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Elements } from "@stripe/react-stripe-js";
@@ -7,7 +8,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import Login from "./Auth/Login";
 import Register from "./Auth/Register";
 import Dashboard from "./pages/Dashboard";
-import Analytics from "./pages/Analytics";       // ← added
+import Analytics from "./pages/Analytics";
 import PostAdPage from "./pages/PostAdPage";
 import MyAdsPage from "./pages/MyAdsPage";
 import MyMessages from "./MyMessages";
@@ -18,6 +19,7 @@ import OrderConfirmation from "./OrderConfirmation";
 import StripeSuccessPage from "./StripeSuccessPage";
 import PrivateRoute from "./PrivateRoute";
 import Navbar from "./Navbar";
+import Notifications from "./components/Notifications";
 
 // 🗂 Listings
 import ListingsPage from "./Listings/ListingsPage";
@@ -25,10 +27,15 @@ import ListingDetail from "./Listings/ListingDetail";
 import EditListing from "./Listings/EditListing";
 import Favorites from "./Listings/Favorites";
 
+// 📈 Seller view
+import SalesPage from "./pages/SalesPage";
+// 🛒 Buyer view
+import OrdersPage from "./pages/OrdersPage";
+
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-// 🔑 Replace with your real Stripe publishable key
+// 🔑 Stripe
 const stripePromise = loadStripe("pk_test_YourPublishableKeyHere");
 
 export default function App() {
@@ -56,13 +63,45 @@ export default function App() {
             }
           />
           <Route
-            path="/analytics"                     /* ← new Analytics route */
+            path="/analytics"
             element={
               <PrivateRoute>
                 <Analytics />
               </PrivateRoute>
             }
           />
+
+          {/* Notifications */}
+          <Route
+            path="/notifications"
+            element={
+              <PrivateRoute>
+                <Notifications />
+              </PrivateRoute>
+            }
+          />
+
+          {/* Seller: view orders placed on your listings */}
+          <Route
+            path="/sales"
+            element={
+              <PrivateRoute>
+                <SalesPage />
+              </PrivateRoute>
+            }
+          />
+
+          {/* Buyer: view orders you placed */}
+          <Route
+            path="/orders"
+            element={
+              <PrivateRoute>
+                <OrdersPage />
+              </PrivateRoute>
+            }
+          />
+
+          {/* Other protected pages */}
           <Route path="/post" element={<PrivateRoute><PostAdPage /></PrivateRoute>} />
           <Route path="/my-ads" element={<PrivateRoute><MyAdsPage /></PrivateRoute>} />
           <Route path="/favorites" element={<PrivateRoute><Favorites /></PrivateRoute>} />

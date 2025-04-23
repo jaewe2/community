@@ -1,3 +1,4 @@
+// src/pages/SettingsPage.jsx
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { auth, signInWithEmailAndPassword } from "../firebase";
@@ -26,7 +27,6 @@ export default function AccountSettings() {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [profileImage, setProfileImage] = useState(null);
 
-  // Load user & profile once
   useEffect(() => {
     const user = auth.currentUser;
     if (user) {
@@ -77,8 +77,9 @@ export default function AccountSettings() {
     }
   };
 
-  // Highlight Analytics tab when on /analytics
+  // Route-based highlights
   const isAnalyticsActive = location.pathname === "/analytics";
+  const isSalesActive = location.pathname === "/sales";
 
   return (
     <div style={styles.container}>
@@ -89,7 +90,9 @@ export default function AccountSettings() {
           onClick={() => setActiveTab("profile")}
           style={{
             ...styles.tab,
-            ...(activeTab === "profile" ? styles.activeTab : {}),
+            ...(activeTab === "profile" && !isAnalyticsActive && !isSalesActive
+              ? styles.activeTab
+              : {}),
           }}
         >
           Profile
@@ -99,7 +102,9 @@ export default function AccountSettings() {
           onClick={() => setActiveTab("security")}
           style={{
             ...styles.tab,
-            ...(activeTab === "security" ? styles.activeTab : {}),
+            ...(activeTab === "security" && !isAnalyticsActive && !isSalesActive
+              ? styles.activeTab
+              : {}),
           }}
         >
           Security
@@ -114,10 +119,20 @@ export default function AccountSettings() {
         >
           Analytics
         </div>
+
+        <div
+          onClick={() => navigate("/sales")}
+          style={{
+            ...styles.tab,
+            ...(isSalesActive ? styles.activeTab : {}),
+          }}
+        >
+          Sales
+        </div>
       </div>
 
       {/* Profile Form */}
-      {activeTab === "profile" && !isAnalyticsActive && (
+      {activeTab === "profile" && !isAnalyticsActive && !isSalesActive && (
         <div style={styles.profileTab}>
           <div style={styles.profileGrid}>
             <div style={styles.leftColumn}>
@@ -196,7 +211,7 @@ export default function AccountSettings() {
       )}
 
       {/* Security Form */}
-      {activeTab === "security" && !isAnalyticsActive && (
+      {activeTab === "security" && !isAnalyticsActive && !isSalesActive && (
         <div style={styles.securityTab}>
           <div style={styles.formField}>
             <label style={styles.label}>Change Email</label>
@@ -228,7 +243,7 @@ export default function AccountSettings() {
             <input
               type="password"
               style={styles.input}
-                  value={newPassword}
+              value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
             <button

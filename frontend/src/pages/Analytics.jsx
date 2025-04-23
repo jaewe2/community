@@ -15,7 +15,7 @@ export default function Analytics() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  // new date‐range state
+  // date‐range filter state
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -37,17 +37,18 @@ export default function Analytics() {
         if (end)   params.set("end", end);
         const qs = params.toString() ? `?${params.toString()}` : "";
 
+        // fire off all 4 requests in parallel
         const [ovRes, pbmRes, sbmRes, sbcRes] = await Promise.all([
-          fetch(`/api/analytics/user/overview/${qs}`,        { headers }),
-          fetch(`/api/analytics/user/posts-by-month/${qs}`,  { headers }),
-          fetch(`/api/analytics/user/sales-by-month/${qs}`,  { headers }),
+          fetch(`/api/analytics/user/overview/${qs}`,          { headers }),
+          fetch(`/api/analytics/user/posts-by-month/${qs}`,    { headers }),
+          fetch(`/api/analytics/user/sales-by-month/${qs}`,    { headers }),
           fetch(`/api/analytics/user/sales-by-category/${qs}`, { headers }),
         ]);
 
         if (!ovRes.ok)  throw new Error("Overview failed");
-        if (!pbmRes.ok) throw new Error("Posts‑by‑month failed");
-        if (!sbmRes.ok) throw new Error("Sales‑by‑month failed");
-        if (!sbcRes.ok) throw new Error("Sales‑by‑category failed");
+        if (!pbmRes.ok) throw new Error("Posts-by-month failed");
+        if (!sbmRes.ok) throw new Error("Sales-by-month failed");
+        if (!sbcRes.ok) throw new Error("Sales-by-category failed");
 
         const [ovData, pbmData, sbmData, sbcData] = await Promise.all([
           ovRes.json(),
@@ -71,8 +72,9 @@ export default function Analytics() {
     []
   );
 
+  // initial load
   useEffect(() => {
-    fetchAnalytics(); // initial
+    fetchAnalytics();
   }, [fetchAnalytics]);
 
   if (loading) {
@@ -110,7 +112,7 @@ export default function Analytics() {
         <h1 style={styles.headerTitle}>Analytics Dashboard</h1>
       </header>
 
-      {/* date-range filter */}
+      {/* ── Date-Range Filter ───────────────────────────────────── */}
       <section style={styles.filterRow}>
         <label>
           From{" "}
@@ -136,6 +138,7 @@ export default function Analytics() {
         </button>
       </section>
 
+      {/* ── Summary Cards ──────────────────────────────────────── */}
       <section style={styles.cardsRow}>
         {[
           ["Posts This Month", overview.postsThisMonth],
@@ -150,7 +153,9 @@ export default function Analytics() {
         ))}
       </section>
 
+      {/* ── Charts Grid ───────────────────────────────────────── */}
       <section style={styles.chartsGrid}>
+
         {/* Listings per Month */}
         <div style={styles.chartBox}>
           <h3 style={styles.chartTitle}>Listings per Month</h3>
@@ -187,7 +192,7 @@ export default function Analytics() {
           )}
         </div>
 
-        {/* Sales by Category */}
+        {/* Sales by Category (full-width) */}
         <div style={{ ...styles.chartBox, gridColumn: "1 / -1" }}>
           <h3 style={styles.chartTitle}>Sales by Category</h3>
           {salesByCategory.length > 0 ? (
