@@ -5,6 +5,7 @@ import { auth } from "./firebase";
 import { signOut } from "firebase/auth";
 import { toast } from "react-toastify";
 import { useAuth } from "./Auth/AuthContext";
+import "./Navbar.css";
 
 export default function Navbar() {
   const { user, loading } = useAuth();

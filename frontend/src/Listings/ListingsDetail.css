@@ -1,0 +1,55 @@
+.details.container {
+    background: linear-gradient(80deg,rgba(255, 255, 255, 1) 75%, var(--accent-color) 75%) !important; 
+    padding: 2rem 3rem !important;
+    animation: slideIn .25s ease-out;
+    border-radius: 0 !important;
+}
+
+.messageBox{
+    color: #eee;
+    border: solid 5px white !important;
+    background-color: #222 !important;
+    border-radius: 0 !important;
+}
+
+@keyframes slideIn {
+    0% {
+        transform: translateY(-5vh);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0vh);
+        opacity: 1;
+    }
+}
+
+.messageBox button {
+    transition: .2s;
+    background-color: #007bff !important;
+}
+
+.messageBox button:hover {
+    background-color: #005abb !important;
+}
+
+.buyBtn{
+    transition: .2s;
+    background-color: #28a745 !important;
+}
+
+.buyBtn:hover{
+    background-color: #1f7c34 !important;
+}
+
+.mainImage{
+    border: solid 10px white !important;
+    border-radius: 0 !important;
+
+}
+
+.ownerBanner {
+    color: #eee !important;
+    border: solid 5px white !important;
+    background-color: #222 !important;
+    border-radius: 0 !important;
+}

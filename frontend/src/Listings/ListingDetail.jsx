@@ -10,6 +10,8 @@ import {
 } from "react-icons/fa";
 import { auth } from "../firebase";
 import { toast } from "react-toastify";
+import "./ListingsDetail.css";
+
 
 export default function ListingDetail() {
   const { id } = useParams();
@@ -160,19 +162,19 @@ export default function ListingDetail() {
   if (!listing) return <p style={{ padding: "2rem" }}>Loading...</p>;
 
   return (
-    <div style={styles.container}>
-      <button onClick={() => navigate(-1)} style={styles.back}>
+    <div class="details container" style={styles.container}>
+      <button onClick={() => navigate(-1)} class="back" style={styles.back}>
         <FaArrowLeft style={{ marginRight: "6px" }} /> Back
       </button>
 
       {mainImage && (
-        <div style={styles.mainImageWrapper}>
-          <img src={mainImage} alt="Main" style={styles.mainImage} />
+        <div class="mainImageWrapper" style={styles.mainImageWrapper}>
+          <img src={mainImage} alt="Main" class="mainImage" style={styles.mainImage} />
         </div>
       )}
 
-      <div style={styles.headerRow}>
-        <h2 style={styles.title}>{listing.title}</h2>
+      <div class="headerRow" style={styles.headerRow}>
+        <h2 class="title}>{listing.title" style={styles.title}>{listing.title}</h2>
         <FaHeart
           onClick={toggleLike}
           color={liked ? "#dc3545" : "#ccc"}
@@ -184,50 +186,50 @@ export default function ListingDetail() {
       {currentUserId !== listing.user_id && listing.price > 0 && (
         <button
           onClick={() => navigate(`/checkout/${listing.id}`)}
-          style={styles.buyBtn}
+          class="buyBtn" style={styles.buyBtn}
         >
           Buy Now (${listing.price})
         </button>
       )}
 
       {currentUserId === listing.user_id && (
-        <div style={styles.actionRow}>
-          <Link to={`/edit-listing/${listing.id}`} style={styles.editBtn}>
+        <div class="actionRow" style={styles.actionRow}>
+          <Link to={`/edit-listing/${listing.id}`} class="editBtn" style={styles.editBtn}>
             ✏️ Edit Listing
           </Link>
-          <button onClick={handleDelete} style={styles.deleteBtn}>
+          <button onClick={handleDelete} class="deleteBtn" style={styles.deleteBtn}>
             <FaTrash style={{ marginRight: "5px" }} /> Delete Listing
           </button>
         </div>
       )}
 
-      <div style={styles.detailBlock}>
-        <p style={styles.price}>
+      <div class="detailBlock" style={styles.detailBlock}>
+        <p class="price" style={styles.price}>
           <FaDollarSign /> ${listing.price}
         </p>
         <p><FaMapMarkerAlt /> {listing.location}</p>
         <p><FaTag /> {listing.category_name || listing.category}</p>
       </div>
 
-      <p style={styles.description}>{listing.description}</p>
-      <p style={styles.date}>
+      <p class="description}>{listing.description" style={styles.description}>{listing.description}</p>
+      <p class="date" style={styles.date}>
         Posted on {new Date(listing.created_at).toLocaleDateString()}
       </p>
 
       {listing.payment_methods?.length > 0 && (
-        <div style={styles.paymentSection}>
+        <div class="paymentSection" style={styles.paymentSection}>
           <h4>Accepted Payments:</h4>
-          <div style={styles.paymentRow}>
+          <div class="paymentRow" style={styles.paymentRow}>
             {listing.payment_methods.map((pm) => {
               const key = pm.name.trim().toLowerCase();
               const iconSrc = localIcons[key] || pm.icon;
               return (
-                <div key={pm.id} style={styles.paymentItem}>
+                <div key={pm.id} class="paymentItem" style={styles.paymentItem}>
                   <img
                     src={iconSrc}
                     alt={pm.name}
                     title={pm.name}
-                    style={styles.paymentIcon}
+                    class="paymentIcon" style={styles.paymentIcon}
                   />
                 </div>
               );
@@ -237,18 +239,18 @@ export default function ListingDetail() {
       )}
 
       {currentUserId === listing.user_id ? (
-        <div style={styles.ownerBanner}>
+        <div class="ownerBanner" style={styles.ownerBanner}>
           <p>You are the owner of this listing. Messaging is disabled.</p>
         </div>
       ) : (
-        <div style={styles.messageBox}>
+        <div class="messageBox" style={styles.messageBox}>
           <h4>Contact Seller</h4>
-          <form onSubmit={handleSendMessage} style={styles.messageForm}>
+          <form onSubmit={handleSendMessage} class="messageForm" style={styles.messageForm}>
             <input
               type="email"
               value={userEmail}
               readOnly
-              style={styles.messageInput}
+              class="messageInput" style={styles.messageInput}
               placeholder="Your Email"
             />
             <textarea
@@ -257,9 +259,9 @@ export default function ListingDetail() {
               required
               value={messageContent}
               onChange={(e) => setMessageContent(e.target.value)}
-              style={styles.messageTextarea}
+              class="messageTextarea" style={styles.messageTextarea}
             />
-            <button type="submit" style={styles.messageButton}>
+            <button type="submit" class="messageButton" style={styles.messageButton}>
               Send Message
             </button>
           </form>

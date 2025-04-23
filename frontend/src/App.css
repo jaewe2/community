@@ -79,7 +79,7 @@
 
 #root{
   width: 100vw !important;
-  height: 100vh !important;
+  min-height: 100vh !important;
   position: absolute;
   top: 0;
   background: linear-gradient(0deg,var(--accent-color) 0%, #fff 100%),      linear-gradient(135deg,#0000 20%, var(--bg-dark-2) 20% 30%,#0000 0),
@@ -95,4 +95,3 @@ body {
   background-size: 100% !important;
   height: 100%;
 }
-

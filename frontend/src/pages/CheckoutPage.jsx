@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { auth } from "../firebase";
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
+import "./CheckoutPage.css";
 
 export default function CheckoutPage() {
   const { id } = useParams();
@@ -150,13 +151,13 @@ export default function CheckoutPage() {
   const selectedMethod = listing.payment_methods.find((pm) => pm.id === Number(selectedPayment));
 
   return (
-    <div style={styles.container}>
-      <button onClick={() => navigate(-1)} style={styles.back}>← Back</button>
+    <div class="container checkout" style={styles.container}>
+      <button onClick={() => navigate(-1)} class="back" style={styles.back}>← Back</button>
       <h2>Checkout: {listing.title}</h2>
-      <p style={styles.price}>Total: ${listing.price}</p>
+      <p class="price" style={styles.price}>Total: ${listing.price}</p>
 
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <fieldset style={styles.fieldset}>
+      <form onSubmit={handleSubmit} class="form" style={styles.form}>
+        <fieldset class="fieldset" style={styles.fieldset}>
           <legend>Select Payment Method</legend>
           {listing.payment_methods.map((pm) => {
             const cleanName = pm.name?.trim().toLowerCase();
@@ -179,8 +180,8 @@ export default function CheckoutPage() {
                   checked={selectedPayment === String(pm.id)}
                   onChange={(e) => setSelectedPayment(e.target.value)}
                 />
-                {matchedIcon && <img src={matchedIcon} alt={pm.name} style={styles.icon} />}
-                <span style={styles.labelText}>{pm.name}</span>
+                {matchedIcon && <img src={matchedIcon} alt={pm.name} class="icon} />" style={styles.icon} />}
+                <span class="labelText}>{pm.name" style={styles.labelText}>{pm.name}</span>
               </label>
             );
           })}
@@ -193,7 +194,7 @@ export default function CheckoutPage() {
           </div>
         )}
 
-        <fieldset style={styles.fieldset}>
+        <fieldset class="fieldset" style={styles.fieldset}>
           <legend>Personal Info</legend>
           <input style={styles.input} placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
           <input style={styles.input} placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
@@ -210,7 +211,7 @@ export default function CheckoutPage() {
           <input style={styles.input} placeholder="Country" value={country} onChange={(e) => setCountry(e.target.value)} />
         </fieldset>
 
-        <button type="submit" style={styles.payBtn} disabled={loading}>
+        <button type="submit" class="payBtn" style={styles.payBtn} disabled={loading}>
           {loading ? "Processing…" : `Pay $${listing.price}`}
         </button>
       </form>

@@ -1,4 +1,4 @@
-#navbar {
+nav {
     position:sticky;
     top: 0;
     background-color: #000 !important;
@@ -7,23 +7,23 @@
     ;
 }
 
-#navbar a {
+nav a {
     color: #fff !important;
     font-weight: lighter !important;
 }
 
-#navbar span {
+nav span {
     color: #bbb !important;
 
 }
 
-#navbar a:hover {
+nav a:hover {
     color: #fff !important;
     text-decoration: underline !important;
     font-weight: lighter !important;
 }
 
-#navbar input {
+nav input {
     border-radius: 0px !important;
     background-color: #333;
     border: none !important;
@@ -34,16 +34,24 @@
     transition: .2s;
 }
 
-#navbar form > * {
+nav form > * {
     margin: 0 !important;
 }
 
-#navbar form:hover > input, #navbar form:active > input, #navbar form:focus > input, input:active, input:focus  {
+nav form:hover > input, nav form:active > input, nav form:focus > input, input:active, input:focus  {
     padding: 6px 6px !important;
     min-width: 180px !important;
 
 }
 
-button {
+nav button {
     background: var(--accent-color) !important;
+    transition: .2s;
+    font-weight: bold;
 }
+
+
+nav button:hover {
+    background: color-mix(in srgb, var(--accent-color), #000 20%) !important;
+}
+

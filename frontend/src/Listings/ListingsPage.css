@@ -1,0 +1,84 @@
+.listings.container {
+    margin: 0 auto;
+    margin-top: 50px !important;
+    max-width: 1200px;
+    padding: 0 !important;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    color:#222;
+    background: #fff ;
+    filter:  drop-shadow(0 0 10px #0004);
+    border-radius: var(--border-size);
+ }
+
+ 
+ .page{ 
+   padding: 2rem;
+ }
+
+ .filterRow {
+    margin-bottom: 1rem !important;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: right;
+}
+ 
+ .container > h2 {
+    font-size: 3em;
+ }
+
+ .listings select{
+    background-color: #0000 !important;
+    border: none !important;
+    
+ }
+
+ .listings select:hover,  .listings select:active{
+    color: #777;
+    border: none !important;
+ }
+
+ .price {
+    color: var(--accent-color) !important;
+ }
+
+
+
+.card {
+   transition: .2s !important;
+   opacity: .8;
+   scale: .975;
+   background: linear-gradient(80deg,rgba(255, 255, 255, 1) 75%, var(--accent-color) 75%) !important; 
+   border-radius: 0px !important;
+}
+
+.card:hover {
+   opacity: 1;
+   scale: 1;
+}
+
+.card .image {
+   margin-top: 10px;
+   border: solid 5px white !important;
+}
+
+.filterRow{
+   justify-content: flex-end !important;
+}
+
+.hero {
+   padding: 2rem 3rem;
+   background: linear-gradient(#fff0, #fff), url(https://images.unsplash.com/photo-1726987196252-55b18175ab8a);
+   background-size: cover;
+ }
+ 
+ .hero h2 {
+   margin-bottom: .25em;
+   font-size: 3em;
+ }
+ 
+ .heart {
+   margin: -5px !important;
+ }
+ 
