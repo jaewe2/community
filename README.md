@@ -12,6 +12,8 @@ npm install socket.io-client
 
 npm install jspdf
 
+npm install recharts react-toastify firebase
+
 
 backend dependencies:
 

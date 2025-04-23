@@ -1,7 +1,15 @@
+# api/models.py
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
 from django.utils.crypto import get_random_string
+
+# for notifications
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 # 🔐 Custom User Model
 class CommunityUser(AbstractUser):
@@ -40,7 +48,7 @@ class PaymentMethod(models.Model):
         return self.name
 
 
-# 🎁 Offering / Add‑on
+# 🎁 Offering / Add-on
 class Offering(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
@@ -70,7 +78,7 @@ class CommunityPosting(models.Model):
         Offering,
         blank=True,
         related_name="postings",
-        help_text="Any add‑ons or extras for this listing"
+        help_text="Any add-ons or extras for this listing"
     )
 
     def __str__(self):
@@ -162,7 +170,7 @@ class Order(models.Model):
         Offering,
         blank=True,
         related_name="orders",
-        help_text="Selected add‑ons for this order"
+        help_text="Selected add-ons for this order"
     )
     total_price = models.DecimalField(
         max_digits=12,
@@ -183,3 +191,66 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order #{self.id} by {self.buyer.username} ({self.status})"
+
+
+# ─── Notification Model ─────────────────────────────────────────────────────
+
+class Notification(models.Model):
+    """
+    Generic notification pointing to any target object
+    (e.g. Message or Order).
+    """
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications"
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications_from",
+        null=True, blank=True
+    )
+    verb = models.CharField(max_length=255)
+
+    # Generic FK to point at Message, Order, etc.
+    target_content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    target_object_id = models.PositiveIntegerField(null=True, blank=True)
+    target = GenericForeignKey("target_content_type", "target_object_id")
+
+    unread = models.BooleanField(default=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-timestamp"]
+
+    def __str__(self):
+        return f"Notification for {self.recipient} – {self.verb}"
+
+
+# ─── Signal handlers to auto-create Notifications ──────────────────────────
+
+@receiver(post_save, sender=Message)
+def notify_on_message(sender, instance, created, **kwargs):
+    if not created or not instance.recipient:
+        return
+    Notification.objects.create(
+        recipient=instance.recipient,
+        actor=instance.sender,
+        verb="sent you a message",
+        target=instance
+    )
+
+
+@receiver(post_save, sender=Order)
+def notify_on_order(sender, instance, created, **kwargs):
+    if not created:
+        return
+    # Notify the seller of the listing
+    seller = instance.listing.user
+    Notification.objects.create(
+        recipient=seller,
+        actor=instance.buyer,
+        verb="purchased your listing",
+        target=instance
+    )
