@@ -10,6 +10,7 @@ nav {
 nav a {
     color: #fff !important;
     font-weight: lighter !important;
+    height: 30px;
 }
 
 nav span {
@@ -47,7 +48,6 @@ nav form:hover > input, nav form:active > input, nav form:focus > input, input:a
 nav button {
     background: var(--accent-color) !important;
     transition: .2s;
-    font-weight: bold;
 }
 
 
@@ -55,3 +55,16 @@ nav button:hover {
     background: color-mix(in srgb, var(--accent-color), #000 20%) !important;
 }
 
+nav > * {
+   flex:1;
+}
+
+nav form {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+nav > *:nth-child(3){
+    justify-content: flex-end;
+}

@@ -43,39 +43,39 @@ export default function MyAdsPage() {
   };
 
   return (
-    <div style={styles.container}>
-      <h1 style={styles.heading}>My Ads</h1>
+    <div class="container" style={styles.container}>
+      <h1 class="heading" style={styles.heading}>My Ads</h1>
       {ads.length === 0 ? (
-        <p style={styles.empty}>You haven’t posted any ads yet.</p>
+        <p class="empty" style={styles.empty}>You haven’t posted any ads yet.</p>
       ) : (
-        <div style={styles.grid}>
+        <div class="grid" style={styles.grid}>
           {ads.map((ad) => {
             const imgUrl = ad.images?.[0]?.url || ad.images?.[0]?.image || "";
             return (
-              <div key={ad.id} style={styles.card}>
-                <div style={styles.imgWrapper}>
+              <div key={ad.id} class="card" style={styles.card}>
+                <div class="imgWrapper" style={styles.imgWrapper}>
                   {imgUrl ? (
-                    <img src={imgUrl} alt={ad.title} style={styles.img} />
+                    <img src={imgUrl} alt={ad.title} class="img" style={styles.img} />
                   ) : (
-                    <div style={styles.noImg}>No Image</div>
+                    <div class="noImg" style={styles.noImg}>No Image</div>
                   )}
                 </div>
-                <div style={styles.content}>
-                  <h3 style={styles.title}>{ad.title}</h3>
-                  <p style={styles.price}>
+                <div class="content" style={styles.content}>
+                  <h3 class="title}>{ad.title" style={styles.title}>{ad.title}</h3>
+                  <p class="price" style={styles.price}>
                     <FaDollarSign /> {ad.price ?? "—"}
                   </p>
-                  <p style={styles.location}>
+                  <p class="location" style={styles.location}>
                     <FaMapMarkerAlt /> {ad.location}
                   </p>
                 </div>
-                <div style={styles.actions}>
-                  <Link to={`/edit-listing/${ad.id}`} style={styles.editBtn}>
+                <div class="actions" style={styles.actions}>
+                  <Link to={`/edit-listing/${ad.id}`} class="editBtn" style={styles.editBtn}>
                     <FaEdit /> Edit
                   </Link>
                   <button
                     onClick={() => handleDelete(ad.id)}
-                    style={styles.deleteBtn}
+                    class="deleteBtn" style={styles.deleteBtn}
                   >
                     <FaTrash /> Delete
                   </button>

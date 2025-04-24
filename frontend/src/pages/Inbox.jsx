@@ -3,6 +3,8 @@ import React, { useEffect, useState, useRef } from "react";
 import { auth } from "../firebase";
 import { toast } from "react-toastify";
 import { FaTrash } from "react-icons/fa";
+import "./Inbox.css";
+
 
 export default function Inbox() {
   const [conversations, setConversations] = useState({});
@@ -120,9 +122,9 @@ export default function Inbox() {
   const threads = Object.entries(conversations);
 
   return (
-    <div style={styles.container}>
-      <aside style={styles.sidebar}>
-        <h2 style={styles.sidebarTitle}>Conversations</h2>
+    <div class="container inbox" style={styles.container}>
+      <aside class="sidebar" style={styles.sidebar}>
+        <h2 class="sidebarTitle" style={styles.sidebarTitle}>Conversations</h2>
         {threads.map(([lid, { title, messages }]) => {
           const last = messages[messages.length - 1];
           const unreadCount = messages.filter(m => !m.isOwn && !m.read).length;
@@ -130,27 +132,31 @@ export default function Inbox() {
           return (
             <div
               key={lid}
+              class={(isActive ? "threadButton active" : "threadButton")}
+                
+          
+              
               style={{
                 ...styles.thread,
                 ...(isActive ? styles.threadActive : {}),
               }}
             >
-              <div style={styles.threadContent}>
+              <div class="threadContent" style={styles.threadContent}>
                 <div
                   onClick={() => handleSelectThread(lid)}
-                  style={styles.threadInner}
+                  class="threadInner" style={styles.threadInner}
                 >
-                  <div style={styles.avatar}>
+                  <div class="avatar" style={styles.avatar}>
                     {(last.isOwn ? currentEmail : last.sender)[0].toUpperCase()}
                   </div>
-                  <div style={styles.metadata}>
-                    <div style={styles.threadTitle}>
+                  <div class="metadata" style={styles.metadata}>
+                    <div class="threadTitle" style={styles.threadTitle}>
                       {title}
                       {unreadCount > 0 && (
-                        <span style={styles.unreadBadge}>{unreadCount}</span>
+                        <span class="unreadBadge}>{unreadCount" style={styles.unreadBadge}>{unreadCount}</span>
                       )}
                     </div>
-                    <div style={styles.threadPreview}>
+                    <div class="threadPreview" style={styles.threadPreview}>
                       {last.isOwn ? "You: " : ""}
                       {last.content.length > 30
                         ? `${last.content.slice(0, 30)}…`
@@ -160,7 +166,7 @@ export default function Inbox() {
                 </div>
                 <button
                   onClick={() => handleDeleteThread(lid)}
-                  style={styles.deleteBtnInline}
+                  class="deleteBtnInline" style={styles.deleteBtnInline}
                   title="Delete"
                 >
                   <FaTrash />
@@ -171,14 +177,14 @@ export default function Inbox() {
         })}
       </aside>
 
-      <main style={styles.chat}>
-        <header style={styles.chatHeader}>
+      <main class="chat" style={styles.chat}>
+        <header class="chatHeader" style={styles.chatHeader}>
           {selectedListingId
             ? conversations[selectedListingId].title
             : "Select a conversation"}
         </header>
 
-        <section style={styles.messages}>
+        <section class="messages" style={styles.messages}>
           {selectedListingId &&
             conversations[selectedListingId].messages
               .slice()
@@ -192,11 +198,11 @@ export default function Inbox() {
                     opacity: msg.read || msg.isOwn ? 1 : 0.8,
                   }}
                 >
-                  <div style={styles.messageHeader}>
+                  <div class="messageHeader" style={styles.messageHeader}>
                     <strong>{msg.isOwn ? "You" : msg.sender}</strong>
                   </div>
-                  <div style={styles.messageBody}>{msg.content}</div>
-                  <div style={styles.messageTime}>
+                  <div class="messageBody" style={styles.messageBody}>{msg.content}</div>
+                  <div class="messageTime" style={styles.messageTime}>
                     {new Date(msg.created_at).toLocaleTimeString()}
                   </div>
                 </div>
@@ -205,9 +211,9 @@ export default function Inbox() {
         </section>
 
         {selectedListingId && (
-          <footer style={styles.replyBox}>
+          <footer class="replyBox" style={styles.replyBox}>
             <textarea
-              style={styles.textarea}
+              class="textarea" style={styles.textarea}
               value={replyText}
               placeholder="Type your reply..."
               onChange={(e) => {
@@ -215,7 +221,7 @@ export default function Inbox() {
                 setReplyText(e.target.value);
               }}
             />
-            <button style={styles.sendBtn} onClick={handleReply}>
+            <button class="sendBtn" style={styles.sendBtn} onClick={handleReply}>
               Send
             </button>
           </footer>
@@ -347,12 +353,12 @@ const styles = {
   },
   messageSent: {
     marginLeft: "auto",
-    background: "#007bff",
+    background: "var(--accent-color)",
     color: "#fff",
   },
   messageReceived: {
     marginRight: "auto",
-    background: "#eaeaea",
+    background: "#fff",
     color: "#000",
   },
   messageHeader: {

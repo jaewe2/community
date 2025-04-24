@@ -1,0 +1,29 @@
+.container.inbox{
+    height: calc(100vh - 50px) !important;
+}
+
+.messages{
+    background: #ccc!important;
+    background-size: cover !important;
+}
+
+.replyBox{
+    background-color: #ccc !important;
+    border-top: solid 0px !important;
+}
+
+.threadButton.active {
+    background-color: color-mix(in srgb, var(--accent-color), #fff 90%)!important;
+}
+
+.threadButton.active .avatar {
+    background-color: var(--accent-color) !important;
+}
+
+.threadButton .avatar {
+    background-color: #aaa !important;
+}
+
+.sidebarTitle {
+    color:  var(--accent-color) !important;
+}

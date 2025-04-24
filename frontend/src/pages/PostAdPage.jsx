@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { auth } from "../firebase";
 import { toast } from "react-toastify";
+import "./PostAdPage.css";
+
 
 export default function PostAdPage() {
   const [categories, setCategories] = useState([]);
@@ -134,15 +136,15 @@ export default function PostAdPage() {
   };
 
   return (
-    <div style={styles.container}>
+    <div class=" postAd container" style={styles.container}>
       <h2>Post a New Ad</h2>
-      <form onSubmit={handleSubmit} style={styles.form}>
+      <form onSubmit={handleSubmit} class="form" style={styles.form}>
         <input
           name="title"
           placeholder="Title"
           value={form.title}
           onChange={handleChange}
-          style={styles.input}
+          class="input" style={styles.input}
           required
         />
         <textarea
@@ -150,7 +152,7 @@ export default function PostAdPage() {
           placeholder="Description"
           value={form.description}
           onChange={handleChange}
-          style={styles.textarea}
+          class="textarea" style={styles.textarea}
           required
         />
         <input
@@ -159,21 +161,21 @@ export default function PostAdPage() {
           placeholder="Price"
           value={form.price}
           onChange={handleChange}
-          style={styles.input}
+          class="input" style={styles.input}
         />
         <input
           name="location"
           placeholder="Location"
           value={form.location}
           onChange={handleChange}
-          style={styles.input}
+          class="input" style={styles.input}
           required
         />
         <select
           name="category"
           value={form.category}
           onChange={handleChange}
-          style={styles.input}
+          class="input" style={styles.input}
           required
         >
           <option value="">Select Category</option>
@@ -184,10 +186,10 @@ export default function PostAdPage() {
           ))}
         </select>
 
-        <fieldset style={styles.fieldset}>
+        <fieldset class="fieldset" style={styles.fieldset}>
           <legend>Payment Methods</legend>
           {paymentMethods.map((pm) => (
-            <label key={pm.id} style={styles.checkboxLabel}>
+            <label key={pm.id} class="checkboxLabel" style={styles.checkboxLabel}>
               <input
                 type="checkbox"
                 checked={form.payment_methods_ids.includes(pm.id)}
@@ -198,10 +200,10 @@ export default function PostAdPage() {
           ))}
         </fieldset>
 
-        <fieldset style={styles.fieldset}>
+        <fieldset class="fieldset" style={styles.fieldset}>
           <legend>Offerings / Add‑ons</legend>
           {offerings.map((of) => (
-            <label key={of.id} style={styles.checkboxLabel}>
+            <label key={of.id} class="checkboxLabel" style={styles.checkboxLabel}>
               <input
                 type="checkbox"
                 checked={form.offerings_ids.includes(of.id)}
@@ -236,25 +238,25 @@ export default function PostAdPage() {
             disabled={images.length >= 5}
             style={{ display: "none" }}
           />
-          <label htmlFor="fileInput" style={styles.uploadLabel}>
+          <label htmlFor="fileInput" class="uploadLabel" style={styles.uploadLabel}>
             Browse
           </label>
         </div>
 
         {images.length > 0 && (
-          <div style={styles.previewRow}>
+          <div class="previewRow" style={styles.previewRow}>
             {images.map((img, i) => (
               <img
                 key={i}
                 src={URL.createObjectURL(img)}
                 alt="preview"
-                style={styles.thumb}
+                class="thumb" style={styles.thumb}
               />
             ))}
           </div>
         )}
 
-        <button type="submit" style={styles.button} disabled={loading}>
+        <button type="submit" class="button" style={styles.button} disabled={loading}>
           {loading ? "Posting…" : "Submit Ad"}
         </button>
       </form>

@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { auth, signInWithEmailAndPassword } from "../firebase";
 import { updatePassword, updateEmail } from "firebase/auth";
 import { useNavigate, useLocation } from "react-router-dom";
+import "./SettingsPage.css";
 
 export default function AccountSettings() {
   const navigate = useNavigate();
@@ -82,12 +83,14 @@ export default function AccountSettings() {
   const isSalesActive = location.pathname === "/sales";
 
   return (
-    <div style={styles.container}>
-      <h1 style={styles.heading}>Account settings</h1>
-
-      <div style={styles.tabsRow}>
+    <div class="settings container" style={styles.container}>
+      <h1 class="heading" style={styles.heading}>Account settings</h1>
+      <div class="content">
+        
+      <div class="tabsRow" style={styles.tabsRow}>
         <div
           onClick={() => setActiveTab("profile")}
+          class={activeTab==="profile" ? "active" : ""}
           style={{
             ...styles.tab,
             ...(activeTab === "profile" && !isAnalyticsActive && !isSalesActive
@@ -100,6 +103,7 @@ export default function AccountSettings() {
 
         <div
           onClick={() => setActiveTab("security")}
+          class={activeTab==="security" ? "active" : ""}
           style={{
             ...styles.tab,
             ...(activeTab === "security" && !isAnalyticsActive && !isSalesActive
@@ -133,31 +137,31 @@ export default function AccountSettings() {
 
       {/* Profile Form */}
       {activeTab === "profile" && !isAnalyticsActive && !isSalesActive && (
-        <div style={styles.profileTab}>
-          <div style={styles.profileGrid}>
-            <div style={styles.leftColumn}>
-              <label style={styles.label}>First Name*</label>
+        <div class="profileTab" style={styles.profileTab}>
+          <div class="profileGrid" style={styles.profileGrid}>
+            <div class="leftColumn" style={styles.leftColumn}>
+              <label class="label" style={styles.label}>First Name*</label>
               <input
-                style={styles.input}
+                class="input" style={styles.input}
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
               />
 
-              <label style={styles.label}>Last Name*</label>
+              <label class="label" style={styles.label}>Last Name*</label>
               <input
-                style={styles.input}
+                class="input" style={styles.input}
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
               />
 
-              <label style={styles.label}>Company</label>
+              <label class="label" style={styles.label}>Company</label>
               <input
-                style={styles.input}
+                class="input" style={styles.input}
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
               />
 
-              <div style={styles.checkboxRow}>
+              <div class="checkboxRow" style={styles.checkboxRow}>
                 <input
                   type="checkbox"
                   checked={displayAsCompany}
@@ -170,25 +174,25 @@ export default function AccountSettings() {
                 </label>
               </div>
 
-              <label style={styles.label}>Phone number</label>
+              <label class="label" style={styles.label}>Phone number</label>
               <input
-                style={styles.input}
+                class="input" style={styles.input}
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
               />
 
-              <button style={styles.updateBtn}>
+              <button class="updateBtn" style={styles.updateBtn}>
                 Update Profile
               </button>
             </div>
-            <div style={styles.rightColumn}>
-              <div style={styles.avatarWrapper}>
+            <div class="rightColumn" style={styles.rightColumn}>
+              <div class="avatarWrapper" style={styles.avatarWrapper}>
                 <img
                   src={previewUrl || "https://via.placeholder.com/100"}
                   alt="Profile"
-                  style={styles.avatar}
+                  class="avatar" style={styles.avatar}
                 />
-                <label htmlFor="avatarUpload" style={styles.pencilOverlay}>
+                <label htmlFor="avatarUpload" class="pencilOverlay" style={styles.pencilOverlay}>
                   ✎
                 </label>
                 <input
@@ -212,25 +216,25 @@ export default function AccountSettings() {
 
       {/* Security Form */}
       {activeTab === "security" && !isAnalyticsActive && !isSalesActive && (
-        <div style={styles.securityTab}>
-          <div style={styles.formField}>
-            <label style={styles.label}>Change Email</label>
+        <div class="securityTab" style={styles.securityTab}>
+          <div class="formField" style={styles.formField}>
+            <label class="label" style={styles.label}>Change Email</label>
             <input
               type="email"
-              style={styles.input}
+              class="input" style={styles.input}
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
             />
-            <button style={styles.saveBtn} onClick={handleEmailUpdate}>
+            <button class="saveBtn} onClick={handleEmailUpdate" style={styles.saveBtn} onClick={handleEmailUpdate}>
               Save Email
             </button>
           </div>
 
-          <div style={styles.formField}>
-            <label style={styles.label}>Current Password</label>
+          <div class="formField" style={styles.formField}>
+            <label class="label" style={styles.label}>Current Password</label>
             <input
               type="password"
-              style={styles.input}
+              class="input" style={styles.input}
               value={currentPassword}
               onChange={(e) =>
                 setCurrentPassword(e.target.value)
@@ -238,16 +242,16 @@ export default function AccountSettings() {
             />
           </div>
 
-          <div style={styles.formField}>
-            <label style={styles.label}>New Password</label>
+          <div class="formField" style={styles.formField}>
+            <label class="label" style={styles.label}>New Password</label>
             <input
               type="password"
-              style={styles.input}
+              class="input" style={styles.input}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
             <button
-              style={styles.saveBtn}
+              class="saveBtn" style={styles.saveBtn}
               onClick={handlePasswordUpdate}
             >
               Save Password
@@ -255,6 +259,7 @@ export default function AccountSettings() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

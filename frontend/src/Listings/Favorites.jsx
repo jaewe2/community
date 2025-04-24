@@ -57,30 +57,30 @@ export default function Favorites() {
   };
 
   return (
-    <div style={styles.container}>
+    <div class="container" style={styles.container}>
       <h2>Your Favorites</h2>
       {favorites.length === 0 ? (
         <p>You have no favorite listings yet.</p>
       ) : (
-        <div style={styles.grid}>
+        <div class="grid" style={styles.grid}>
           {favorites.map((fav) => {
             // Get the image from listing_images, no default placeholder
             const img = fav.listing_images?.[0]?.url || fav.listing_images?.[0]?.image;
             return (
               <div
                 key={fav.id}
-                style={styles.card}
+                class="card" style={styles.card}
                 // Updated onClick to use the correct route for listing details
                 onClick={() => navigate(`/listing-detail/${fav.listing}`)}
               >
-                {img && <img src={img} alt="Listing" style={styles.image} />}
+                {img && <img src={img} alt="Listing" class="image} />" style={styles.image} />}
                 <h4>{fav.listing_title}</h4>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     confirmUnfavorite(fav);
                   }}
-                  style={styles.removeBtn}
+                  class="removeBtn" style={styles.removeBtn}
                 >
                   Remove
                 </button>
@@ -91,18 +91,18 @@ export default function Favorites() {
       )}
 
       {showModal && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
+        <div class="modalOverlay" style={styles.modalOverlay}>
+          <div class="modal" style={styles.modal}>
             <h3>Remove Favorite</h3>
             <p>
               Are you sure you want to remove{" "}
               <strong>{selectedFavorite?.listing_title}</strong> from your favorites?
             </p>
-            <div style={styles.modalActions}>
-              <button onClick={handleRemove} style={styles.confirmBtn}>
+            <div class="modalActions" style={styles.modalActions}>
+              <button onClick={handleRemove} class="confirmBtn" style={styles.confirmBtn}>
                 Yes, Remove
               </button>
-              <button onClick={() => setShowModal(false)} style={styles.cancelBtn}>
+              <button onClick={() => setShowModal(false)} class="cancelBtn" style={styles.cancelBtn}>
                 Cancel
               </button>
             </div>

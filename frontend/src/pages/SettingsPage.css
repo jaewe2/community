@@ -1,0 +1,39 @@
+.settings.container {
+    margin: 0 auto;
+    margin-top: 50px !important;
+    max-width: 1200px;
+    padding: 0 !important;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    color:#222;
+    background: #fff ;
+    filter:  drop-shadow(0 0 10px #0004);
+    border-radius: 0;
+ }
+
+ .settings .heading{
+    background: linear-gradient(#fff0, #fff), url(https://images.unsplash.com/photo-1573614999645-e5f0f16ec15d);
+    background-size: cover;
+    color: #fff;
+    text-shadow: 0 0 2px #000;
+    padding: 2rem 3rem;
+ }
+
+ .content{
+    padding: 0 2rem;
+    padding-bottom: 2rem;
+ }
+
+ .tabsRow .active{
+    border-bottom: 3px solid var(--accent-color) !important;
+ }
+ 
+ .settings button {
+    transition: .2s;
+    background: var(--accent-color) !important;
+ }
+
+ .settings button:hover {
+  background: color-mix(in srgb, var(--accent-color),#000 20%) !important;
+ }
+
+ .actions {border-top: 0 !important;}

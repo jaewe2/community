@@ -7,7 +7,7 @@
     color:#222;
     background: #fff ;
     filter:  drop-shadow(0 0 10px #0004);
-    border-radius: var(--border-size);
+    border-radius: 0;
  }
 
  
@@ -51,6 +51,7 @@
    scale: .975;
    background: linear-gradient(80deg,rgba(255, 255, 255, 1) 75%, var(--accent-color) 75%) !important; 
    border-radius: 0px !important;
+   box-shadow: rgba(0, 0, 0, 0.2) 0px 4px 5px !important;
 }
 
 .card:hover {
@@ -70,6 +71,8 @@
 .hero {
    padding: 2rem 3rem;
    background: linear-gradient(#fff0, #fff), url(https://images.unsplash.com/photo-1726987196252-55b18175ab8a);
+   color: #fff;
+   text-shadow: 0 0 2px #000;
    background-size: cover;
  }
  

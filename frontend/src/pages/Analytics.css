@@ -1,0 +1,29 @@
+.analytics .header{
+    background: linear-gradient(0deg, rgb(244, 244, 244) 0%, #fff0 100%), url(https://images.unsplash.com/photo-1470225620780-dba8ba36b745) !important;
+}
+
+.cardValue {
+    color: var(--accent-color) !important;
+}
+
+.analytics  label {
+    position: relative;
+}
+
+.analytics  label span {
+    position: absolute;
+    margin-top: -18%;
+}
+
+.analytics .filterRow {
+    margin-top: 3rem !important;
+}
+
+.analytics button {
+    transition: .2s;
+    background: var(--accent-color) !important;
+ }
+
+ .analytics button:hover {
+  background: color-mix(in srgb, var(--accent-color),#000 20%) !important;
+ }

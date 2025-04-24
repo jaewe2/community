@@ -17,6 +17,7 @@
     border-radius:0 0 !important;
     margin-left: -2rem;
     margin-top: -2rem;
+    text-shadow: 0 0 2px #000;
     width: calc(100% + 1rem);
 }
 

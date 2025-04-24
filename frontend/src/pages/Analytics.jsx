@@ -6,6 +6,8 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
   BarChart, Bar, PieChart, Pie, Cell, Legend, ResponsiveContainer
 } from "recharts";
+import "./Analytics.css";
+
 
 export default function Analytics() {
   const [overview, setOverview] = useState(null);
@@ -78,11 +80,11 @@ export default function Analytics() {
   }, [fetchAnalytics]);
 
   if (loading) {
-    return <div style={styles.loading}>Loading analytics…</div>;
+    return <div class="loading" style={styles.loading}>Loading analytics…</div>;
   }
   if (error) {
     return (
-      <div style={styles.loading}>
+      <div class="loading" style={styles.loading}>
         <p>Failed to load analytics.</p>
         <button onClick={() => fetchAnalytics(startDate, endDate)}>
           Retry
@@ -91,7 +93,7 @@ export default function Analytics() {
     );
   }
   if (!overview) {
-    return <div style={styles.loading}>No analytics data available.</div>;
+    return <div class="loading" style={styles.loading}>No analytics data available.</div>;
   }
 
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AA336A"];
@@ -107,15 +109,15 @@ export default function Analytics() {
   };
 
   return (
-    <div style={styles.page}>
-      <header style={styles.header}>
-        <h1 style={styles.headerTitle}>Analytics Dashboard</h1>
+    <div class="page analytics" style={styles.page}>
+      <header class="header" style={styles.header}>
+        <h1 class="headerTitle" style={styles.headerTitle}>Analytics Dashboard</h1>
       </header>
 
       {/* ── Date-Range Filter ───────────────────────────────────── */}
-      <section style={styles.filterRow}>
+      <section class="filterRow" style={styles.filterRow}>
         <label>
-          From{" "}
+          <span>From{" "}</span>
           <input
             type="date"
             value={startDate}
@@ -123,7 +125,7 @@ export default function Analytics() {
           />
         </label>
         <label>
-          To{" "}
+        <span>To{" "}</span>
           <input
             type="date"
             value={endDate}
@@ -131,7 +133,7 @@ export default function Analytics() {
           />
         </label>
         <button
-          style={styles.applyBtn}
+          class="applyBtn" style={styles.applyBtn}
           onClick={() => fetchAnalytics(startDate, endDate)}
         >
           Apply
@@ -139,26 +141,26 @@ export default function Analytics() {
       </section>
 
       {/* ── Summary Cards ──────────────────────────────────────── */}
-      <section style={styles.cardsRow}>
+      <section class="cardsRow" style={styles.cardsRow}>
         {[
           ["Posts This Month", overview.postsThisMonth],
           ["Total Posts",       overview.totalPosts],
           ["Sales This Month",  overview.salesThisMonth],
           ["Total Sales",       overview.totalSales],
         ].map(([label, value], i) => (
-          <div key={i} style={styles.card}>
-            <p style={styles.cardLabel}>{label}</p>
-            <p style={styles.cardValue}>{value}</p>
+          <div key={i} class="analyticsCard" style={styles.card}>
+            <p class="cardLabel" style={styles.cardLabel}>{label}</p>
+            <p class="cardValue" style={styles.cardValue}>{value}</p>
           </div>
         ))}
       </section>
 
       {/* ── Charts Grid ───────────────────────────────────────── */}
-      <section style={styles.chartsGrid}>
+      <section class="chartsGrid" style={styles.chartsGrid}>
 
         {/* Listings per Month */}
-        <div style={styles.chartBox}>
-          <h3 style={styles.chartTitle}>Listings per Month</h3>
+        <div class="chartBox" style={styles.chartBox}>
+          <h3 class="chartTitle" style={styles.chartTitle}>Listings per Month</h3>
           {postsByMonth.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={postsByMonth} margin={{ bottom: 20 }}>
@@ -170,13 +172,13 @@ export default function Analytics() {
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <p style={styles.emptyMessage}>No listings data.</p>
+            <p class="emptyMessage" style={styles.emptyMessage}>No listings data.</p>
           )}
         </div>
 
         {/* Sales per Month */}
-        <div style={styles.chartBox}>
-          <h3 style={styles.chartTitle}>Sales per Month</h3>
+        <div class="chartBox" style={styles.chartBox}>
+          <h3 class="chartTitle" style={styles.chartTitle}>Sales per Month</h3>
           {salesByMonth.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={salesByMonth} margin={{ bottom: 20 }}>
@@ -188,13 +190,13 @@ export default function Analytics() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p style={styles.emptyMessage}>No sales data.</p>
+            <p class="emptyMessage" style={styles.emptyMessage}>No sales data.</p>
           )}
         </div>
 
         {/* Sales by Category (full-width) */}
         <div style={{ ...styles.chartBox, gridColumn: "1 / -1" }}>
-          <h3 style={styles.chartTitle}>Sales by Category</h3>
+          <h3 class="chartTitle" style={styles.chartTitle}>Sales by Category</h3>
           {salesByCategory.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
@@ -215,7 +217,7 @@ export default function Analytics() {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <p style={styles.emptyMessage}>No category data.</p>
+            <p class="emptyMessage" style={styles.emptyMessage}>No category data.</p>
           )}
         </div>
       </section>

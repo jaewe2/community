@@ -69,7 +69,7 @@
 /* */
 
 :root {
-  --accent-color: #751fff;
+  --accent-color: #8940ff;
   --accent-color-t: #751fff22;
   --accent-color-2-t: #ffffff11;
   --border-size: 20px;
@@ -86,7 +86,6 @@
   repeating-linear-gradient(45deg, var(--bg-dark-2) 20% 30%,var(--bg-dark-1) 0 70%), repeating-linear-gradient(45deg, var(--bg-dark-2) 20% 30%,var(--bg-dark-1) 0 70%); 
   background-size: contain,  30px 30px,  30px 30px;
   background-blend-mode: overlay, normal, normal;
-  padding-bottom: 5rem;
 }
 
 body {
